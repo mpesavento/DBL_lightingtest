@@ -1,0 +1,5 @@
+
+
+Target arduino for hacking:
+Arduino pro micro
+programmable with microUSB, ATMEGA32 processor
