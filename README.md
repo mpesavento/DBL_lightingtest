@@ -12,3 +12,8 @@ This contains a quick mapping from node coordinates of DBL1 (xyz coordinates) in
 ## node_info.csv
 Contains the node coordinates and bar lengths from DBL 1.0. Not accurate for current module arrangements
 
+## enetLEDTriangle51.ino
+ethernet input to arduino, example from Sean
+
+## reform_module.py
+Code to parse node_info.csv data and select a subset of nodes, interpolating the number of pixels between each node and outputting the pixel coordinates in XYZ

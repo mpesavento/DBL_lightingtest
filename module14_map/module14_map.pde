@@ -47,14 +47,14 @@ float spinx = 0;
 float spinz = 0;
 void draw() {
   background(0);
-  translate(width/2, height/2, 525);
+  translate(width/2, height/2, 500);
   rotateX(PI/3+spinx);
   rotateZ(-PI/6+spinz);
   noFill();
   strokeWeight(3);
   
   //spinx+=0.01;
-  //spinz+=0.005;
+  spinz+=0.003;
 
   wave1 += inc1;
   wave2 += inc2;
