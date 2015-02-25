@@ -54,6 +54,7 @@ x0=segs[module_path[0]]["fx"]
 y0=segs[module_path[0]]["fy"]
 z0=segs[module_path[0]]["fz"]
 
+segment_indexes={}
 leds=[]
 led_distance=0.656168 #60 leds per meter, in inches. Why in tarnation are we using inches?
 start=module_path[0]
@@ -75,6 +76,7 @@ for node in module_path[1:]:
          xd = f["tx"] - f["fx"]
          yd = f["ty"] - f["fy"]
          zd = f["tz"] - f["fz"]
+         right_direction=k
       except KeyError:
          f = fs[k2]
          fs[k]=f
@@ -82,6 +84,9 @@ for node in module_path[1:]:
          xd = f["fx"] - f["tx"]
          yd = f["fy"] - f["ty"]
          zd = f["fz"] - f["tz"]
+         right_direction=k2
+      segment_indexes[right_direction]=[]
+      segment_indexes[right_direction].append(len(ledpositions)+1)
       distance=math.sqrt(math.pow(xd,2)+math.pow(yd,2)+math.pow(zd,2))
       distance_covered+=distance
       divcount=0
@@ -108,6 +113,7 @@ for node in module_path[1:]:
          if ledy>maxledz:
             maxledz=ledz
          divcount+=1
+      segment_indexes[right_direction].append(len(ledpositions))
       start=end
       #ledpositions.append(node)
 
@@ -115,8 +121,16 @@ with open("led_positions.csv","wb") as f:
    wrtr=csv.writer(f)
    for c,led in enumerate(ledpositions):
       wrtr.writerow([c]+led)
-
       print c,"-",led
+
+with open("segment_start_end_indexes.csv","wb") as f:
+   wrtr=csv.writer(f)
+   for segment in segment_indexes:
+      wrtr.writerow([segment]+segment_indexes[segment])
+
+for x in segment_indexes:
+   print x,segment_indexes[x]      
+
 print "min x,y,z:",minledx,minledy,minledz
 print "max x,y,z:",maxledx,maxledy,maxledz
 
