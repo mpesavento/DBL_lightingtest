@@ -1,13 +1,42 @@
 // This should plot the pixels of APA102 created for module 14
 // coordinates created by Alex Maki-Jokela
 
-String lines[];
-class Particle {
-  int i; //linear index
-  float x,y,z;
-  int r,g,b;
-}
 
+
+
+
+/**** globals ****************************/
+
+int ROTATION_TYPE = 1;
+// 0 = no motion
+// 1 = wiggle around z
+// 2 = rotate clockwise around z
+
+//rotate the coordinate frame so LIE-LAW axis is vertical, LIE (origin) on the bottom
+float sx = 0;
+float sz = 0;
+
+//starting angle for tilt along X (azimuth), 0 is top-down,PI/4 is 
+//float phi = 0;
+//float phi = PI/8;
+//float phi = PI/6;
+float phi = PI/4;
+//float phi = PI/3;
+
+
+float theta = 0; //not used, for rotating along Z?
+
+/* this is waaaay more complicated than it needs to be! */
+float XSPIN_RATE = 0; // 0.008
+float ZSPIN_RATE = 0.01; // 0.008
+int WIGGLE_MAX = 200;
+
+float spinx = 0; //object spin rate, X
+float spinz = ZSPIN_RATE;
+int spinz_dir = 1;
+int wiggle_count = 0; //loop over this til wiggle_count % WIGGLE_RATE==0 and change directions
+
+// particle buffer
 ArrayList<Particle> particles;
 
 // init global variables for 3sin sequence
@@ -28,6 +57,54 @@ int mul1=20;
 int mul2=25;
 int mul3=22;
 
+/**** methods ****************************/
+
+
+String lines[];
+class Particle {
+  int i; //linear index
+  float x,y,z;
+  int r,g,b;
+}
+
+void rotateCamera() {
+  // look through this for more!
+  // https://processing.org/tutorials/p3d/
+  
+  //use mouse!
+  //camera(mouseX, height/2, (height/2) / tan(PI/6), width/2, height/2, 0, 0, 1, 0);
+}
+
+void setModelRotate() {
+  
+  switch (ROTATION_TYPE) {
+    case 0: // no rotation
+      translate(width/2-40, height/2, 520); //center LIE in screen
+      rotateX(phi);
+//      spinz=0;
+      break;
+    case 1: // wiggle on Z
+      translate(width/2-40, height/2, 520); //center LIE in screen
+      if (wiggle_count % WIGGLE_RATE==0) {
+        wiggle_count=0;
+        spinz_dir*=-1; // change sign of spin
+      }
+      spinx+=XSPIN_RATE;
+      spinz+=spinz_dir*ZSPIN_RATE;
+      rotateX(phi);
+      rotateZ(spinz);
+      break;
+    case 2: 
+      translate(width/2, height/2, 500); // not quite centered, since origin (0,0,0) at LIE is not in center of object
+      spinx+=XSPIN_RATE;
+      spinz+=ZSPIN_RATE;
+      rotateX(phi+spinx);
+      rotateZ(spinz);
+     break; 
+  }
+  wiggle_count+=1;
+}  
+
 void setup() {
   size(1024,768, P3D);
   lines = loadStrings("C:\\Users\\mpesavento\\src\\DBL_lightingtest\\led_positions.csv");
@@ -43,18 +120,16 @@ void setup() {
   }
 }
 
-float spinx = 0;
-float spinz = 0;
+
 void draw() {
   background(0);
-  translate(width/2, height/2, 500);
-  rotateX(PI/3+spinx);
-  rotateZ(-PI/6+spinz);
   noFill();
   strokeWeight(3);
   
+  setModelRotate();
+  
   //spinx+=0.01;
-  spinz+=0.003;
+  //spinz+=0.003;
 
   wave1 += inc1;
   wave2 += inc2;
@@ -63,9 +138,9 @@ void draw() {
   
   for(int i=0; i<particles.size(); i++){
      Particle p = particles.get(i);
-     stroke(qsub8(sin8(mul1*i + wave1), lvl1),
-            qsub8(sin8(mul2*i + wave2), lvl2), 
-            qsub8(sin8(mul3*i + wave3), lvl3));
+     stroke(qsub8(sin8(mul1*i + wave1), lvl1), //R
+            qsub8(sin8(mul2*i + wave2), lvl2),  //G
+            qsub8(sin8(mul3*i + wave3), lvl3)); //B
      point(p.x, p.y, p.z);    
   }
 
@@ -81,7 +156,7 @@ int qsub8(int i, int j) {
 }
 
 //expected input is a uint8_t from 0-255
-//output is unsigned uint8_t
+//output is unsigned uint8_t (0-255)
 int sin8(int x) {
   return int( (sin( (x/128.0)*PI) * 128) + 128);
 }
