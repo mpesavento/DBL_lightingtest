@@ -55,10 +55,9 @@ struct protoByte { uint8_t pbyte; };
 #define CMD_BLINK 0x24 // Followed by nothing
 
 // Acknowledgements begin controller->master messages
-#define ACK_RESET 0x7e // Stands alone
-#define ACK_ONE   0x21 // Followed by 12-bit LED index
-#define ACK_MANY  0x22 // Followed by 12-bit LED count
-#define ACK_IDENT 0x23 // Followed by 12-bit controller ID and 12-bit LED count
+#define ACK_RESET 0x7e  
+#define ACK_OKAY  0x21 
+#define ACK_IDENT 0x22 // Followed by 12-bit controller ID and 12-bit LED count
 #define ACK_ERROR 0x7d // Error during decoding
 
 #define RESULT_GOOD 1
@@ -291,9 +290,8 @@ int commandOne(struct protoByte b1)
   if ((res = serialReadRGB(&(leds[ledno]))) != RESULT_GOOD) {
     return res;
   }
-
-  Serial.write(ACK_ONE);
-  return serialWrite12(ledno);
+  FastLED.show();
+  Serial.write(ACK_OKAY);
 }
 
 int commandBlock()
@@ -313,22 +311,20 @@ int commandBlock()
   }
 
   uint16_t idx;
-  for (idx = 0; idx < (1 + ledhi - ledlo); idx++) {
+  for (idx = 0; ledlo + idx <= ledhi; idx++) {
     if ((res = serialReadRGB(&(leds[ledlo + idx]))) != RESULT_GOOD) {
       break;
     }
   }
-
-  Serial.write(ACK_MANY);
-  return serialWrite12(idx);
+  FastLED.show();
+  Serial.write(ACK_OKAY);
 }
 
 int commandBlank(void)
 {
   fill_solid(leds, NUM_LEDS, CRGB::Black);
-
-  Serial.write(ACK_MANY);
-  return serialWrite12(NUM_LEDS);
+  FastLED.show();
+  Serial.write(ACK_OKAY);
 }
 
 int commandQuery(void)
@@ -363,6 +359,7 @@ int commandBlink(void)
 
   FastLED.show();
 
-  return commandQuery();
+  Serial.write(ACK_OKAY);
+  return RESULT_GOOD;
 }
 
