@@ -139,7 +139,7 @@ int serialDecode12(uint16_t *dest, struct protoByte b1, struct protoByte b2)
   if ((d1 | d2) & ENCODE_INVM) {
     return RESULT_ERROR;
   } else {
-    (*dest) = (d1 << 6) + d2;
+    (*dest) = (((uint16_t) d1) << 6) + d2;
     return RESULT_GOOD;
   }
 }
