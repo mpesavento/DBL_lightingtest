@@ -13,12 +13,12 @@
 // and then how to turn a single pixel white and then off, moving down the line of pixels.
 // 
 
-#define SERIAL_SPEED 9600
+#define SERIAL_SPEED 115200
 
-#define CONTROLLER_ID 0x000
+#define CONTROLLER_ID 0x123
 
 // How many leds are in the strip?
-#define NUM_LEDS 128
+#define NUM_LEDS 100
 
 // Data pin that led data will be written out over
 #define DATA_PIN 12
@@ -159,13 +159,13 @@ int serialWrite12(uint16_t val)
 
 int serialEncode12(struct protoByte *b1, struct protoByte *b2, uint16_t val)
 {
-  if (val & (ENCODE_MASK | (ENCODE_MASK << 6))) {
+  if (val > (ENCODE_MASK + (ENCODE_MASK << 6))) {
     return RESULT_ERROR;
   }
 
-  b2->pbyte = (val & ENCODE_MASK);
+  b2->pbyte = ENCODE_BASE + (val & ENCODE_MASK);
   val = val >> 6;
-  b1->pbyte = (val & ENCODE_MASK);
+  b1->pbyte = ENCODE_BASE + (val & ENCODE_MASK);
 
   return RESULT_GOOD;
 }
@@ -264,8 +264,10 @@ void protoError()
       Serial.read();
     }
 
-    digitalWrite(STATUS_PIN, ((millis() / 400) > 200));
+    digitalWrite(STATUS_PIN, ((millis() % 400) > 200));
   } while (1);
+  
+  digitalWrite(STATUS_PIN, LOW);
 }
 
 int commandOne(struct protoByte b1)
@@ -290,8 +292,7 @@ int commandOne(struct protoByte b1)
   }
 
   Serial.write(ACK_ONE);
-  serialWrite12(ledno);
-  return RESULT_GOOD;
+  return serialWrite12(ledno);
 }
 
 int commandBlock()
@@ -318,7 +319,7 @@ int commandBlock()
   }
 
   Serial.write(ACK_MANY);
-  serialWrite12(idx);
+  return serialWrite12(idx);
 }
 
 int commandBlank(void)
@@ -326,17 +327,19 @@ int commandBlank(void)
   fill_solid(leds, NUM_LEDS, CRGB::Black);
 
   Serial.write(ACK_MANY);
-  serialWrite12(NUM_LEDS);
+  return serialWrite12(NUM_LEDS);
 }
 
 int commandQuery(void)
 {
+  int res;
+  
   Serial.write(ACK_IDENT);
 
-  serialWrite12(CONTROLLER_ID);
-  serialWrite12(NUM_LEDS);
-
-  return RESULT_GOOD;
+  if ((res = serialWrite12(CONTROLLER_ID)) != RESULT_GOOD) {
+    return res; 
+  }
+  return serialWrite12(NUM_LEDS);
 }
 
 int commandBlink(void)
