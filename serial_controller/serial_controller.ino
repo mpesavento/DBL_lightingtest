@@ -56,10 +56,9 @@ struct protoByte { uint8_t pbyte; };
 
 // Acknowledgements begin controller->master messages
 #define ACK_RESET 0x7e // Stands alone
-#define ACK_ZERO  0x21 // Stands alone
-#define ACK_ONE   0x22 // Followed by 12-bit LED index
-#define ACK_MANY  0x23 // Followed by 12-bit LED count
-#define ACK_IDENT 0x24 // Followed by 12-bit controller ID and 12-bit LED count
+#define ACK_ONE   0x21 // Followed by 12-bit LED index
+#define ACK_MANY  0x22 // Followed by 12-bit LED count
+#define ACK_IDENT 0x23 // Followed by 12-bit controller ID and 12-bit LED count
 #define ACK_ERROR 0x7d // Error during decoding
 
 #define RESULT_GOOD 1
