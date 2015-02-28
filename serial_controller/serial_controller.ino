@@ -264,7 +264,9 @@ void protoError()
       Serial.read();
     }
 
-    digitalWrite(STATUS_PIN, ((millis() % 400) > 200));
+    int t = (millis() % 2600) / 100;
+
+    digitalWrite(STATUS_PIN, (t == 0 || t == 2 || t == 4 || (t >= 6 && t <= 16 && t != 9 && t != 13) || t == 18 || t == 20 || t == 22));
   } while (1);
   
   digitalWrite(STATUS_PIN, LOW);
