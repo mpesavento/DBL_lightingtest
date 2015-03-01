@@ -1,28 +1,21 @@
+#include "FastLED.h"
+
+// Per-controller configuration:
+#define CONTROLLER_ID 0x123
+#define NUM_LEDS 300
+
+#define SERIAL_SPEED 115200
+
+// SPI configuration:
+// Data pin that led data will be written out over
+#define DATA_PIN 12
+// Clock pin only needed for SPI based chipsets when not using hardware SPI
+#define CLOCK_PIN 11
 // Use if you want to force the software SPI subsystem to be used for some reason (generally, you don't)
 // #define FORCE_SOFTWARE_SPI
 // Use if you want to force non-accelerated pin access (hint: you really don't, it breaks lots of things)
 // #define FORCE_SOFTWARE_SPI
 // #define FORCE_SOFTWARE_PINS
-#include "FastLED.h"
-
-///////////////////////////////////////////////////////////////////////////////////////////
-//
-// Move a white dot along the strip of leds.  This program simply shows how to configure the leds,
-// and then how to turn a single pixel white and then off, moving down the line of pixels.
-// 
-
-#define SERIAL_SPEED 115200
-
-#define CONTROLLER_ID 0x123
-
-// How many leds are in the strip?
-#define NUM_LEDS 300
-
-// Data pin that led data will be written out over
-#define DATA_PIN 12
-
-// Clock pin only needed for SPI based chipsets when not using hardware SPI
-#define CLOCK_PIN 11
 
 // Pin for status LED
 #define STATUS_PIN 13
@@ -30,6 +23,105 @@
 // This is an array of leds.  One item for each led in your strip.
 CRGB leds[NUM_LEDS];
 bool autoUpdate;
+
+// SERIAL PROTOCOL
+
+// The protocol consists of messages sent from the master to the
+// Arduino controller, comprising a command along with a collection of
+// data. These controller acknowledges each message after completing
+// all required processing (updating memory and potentially sending
+// new data out to LEDs.
+
+// Messages manipulate a stored array of LED values on the controller,
+// as well as the propagation of stored LED values onto the attached
+// physical LEDs. By default, messages change only stored LED values
+// and a separate message triggers an update of the physical LEDs with
+// the stored values. The controller can be set into "auto-update"
+// mode, meaning that stored LED values are propagated immediately
+// following all changes to their stored values.
+
+// LOW-LEVEL DETAILS
+
+// Protocol bytes are always between 0x21 (ASCII '!') and 0x7e (ASCII
+// '~') inclusive. The space character 0x20 is never used.
+
+// The protocol encodes 6-bit values by adding 0x30 (ASCII '0'),
+// yielding an encoded value between 0x30 and 0x6f (ASCII 'o'). These
+// 6-bit values are combined to represent 12-bit integers in
+// most-significant-first order, as well as 24-bit colors in 8-bit,
+// RGB, most-significant-first order.
+
+// The value 0x7e (ASCII '~') is reserved for a "reset" value that may
+// be sent by the master at any time. This terminates any ongoing
+// message, though in some cases the message may have been partially
+// executed. The Arduino controller acknowledges the reset by sending
+// back 0x7e, at which point the master can send a new message.
+
+// When the Arduino controller receives erroneous data, it terminates
+// the current message (which may have been partially executed) and
+// immediately sends an error byte 0x7d (ASCII '}'). The controller
+// ignores all subsequent data until a protocol reset is completed,
+// initiated by the master as described above and then acknowledged by
+// the Arduino controller.
+
+// MESSAGES
+
+// A single-LED update message comprises a 12-bit LED index followed
+// by a 24-bit color. Any message beginning with a valid 6-bit value
+// is a single-LED update. This message is acknowledged with
+// ACK_STORED = 0x22 (ASCII '"'), unless the controller is in
+// auto-update mode, in which case it is acknowledged with ACK_UPDATED
+// = 0x23 (ASCII '#').
+
+// A block update message begins with an 0x21 (ASCII '!') command
+// byte, followed by two 12-bit numbers giving the first and the last
+// LED indexes to be updated, inclusively. New 24-bit colors for these
+// LEDs are then specified in order from first to last. Protocol
+// errors or resets arising in the middle of a block update message
+// can result in the update of a subset of LEDs, which will occur in
+// the absence of an acknowledgement. This message is acknowledged
+// with ACK_STORED or ACK_UPDATED as with single-LED updates.
+
+// A blanking message comprises an 0x22 (ASCII '"') command byte. This
+// resets all stored LED colors to black (i.e., off). It is
+// acknowledged by ACK_STORED or ACK_UPDATED as with single-LED
+// updates.
+
+// A controller query message comprises an 0x23 (ASCII '#') command
+// byte. It is acknowledged by an ACK_IDENT = 0x21 (ASCII '!')
+// followed by a 12-bit / 2-byte controller ID number and a 12-bit /
+// 2-byte LED count.
+
+// A controller blink message comprises an 0x24 (ASCII '$') command
+// byte. This blinks all LEDs by XORing their color value components
+// with 255, typically changing the hue and brightness of the entire
+// strip very noticeably (though 50% grey does not change
+// greatly). The blink lasts 1 second, after which time values are
+// reverted to their original status. The controller blink is intended
+// for development and debugging rather than generating visual
+// effects, and so it is propagated to the physical LEDs
+// immediately. It is acknowledged by ACK_UPDATED = 0x23 (ASCII '#')
+// after the ~1s blink is completed.
+
+// The update message comprises an 0x25 (ASCII '%') command byte. This
+// propagates stored LED colors onto physical LEDs immediately, and is
+// acknowledged by ACK_UPDATED = 0x23 (ASCII '#').
+
+// The auto-update message comprises an 0x26 (ASCII '&') command
+// byte. This sets the controller into auto-update mode and
+// immediately propagates stored LED colors onto physical LEDs, and is
+// acknowledged by ACK_UPDATED = 0x23 (ASCII '#').
+
+// The no-auto-update message comprises an 0x27 (ASCII ''') command
+// byte. This unsets auto-update mode on the controller and is
+// acknowledged by ACK_STORED = 0x22 (ASCII '"').
+
+// Messages 0x28 (ASCII '(') through 0x2f (ASCII '/') and 0x70 (ASCII
+// 'p') through 0x7c (ASCII '|') are available for future expansion;
+// it is advised to avoid using 0x7d for future messages although 0x7d
+// has special significance for controller-to-master messages at
+// present. All acknowledgement values 0x24 (ASCII '$') through 0x7c
+// are available for future expansion. 
 
 // Serial protocol
 #define PROTO_MIN   0x21
@@ -57,17 +149,16 @@ struct protoByte { uint8_t pbyte; };
 #define CMD_NOAUTOUPDATE 0x27
 
 // Acknowledgements begin controller->master messages
-#define ACK_RESET 0x7e  
 #define ACK_IDENT 0x21 // Followed by 12-bit controller ID and 12-bit LED count
 #define ACK_STORED 0x22
 #define ACK_UPDATED 0x23
 #define ACK_ERROR 0x7d // Error during decoding
+#define ACK_RESET 0x7e  
 
 #define RESULT_GOOD 1
 #define RESULT_RESET -1
 #define RESULT_ERROR -2
 
-// This function sets up the ledsand tells the controller about them
 void setup() {
     // sanity check delay - allows reprogramming if accidently blowing power w/leds
     pinMode(STATUS_PIN, OUTPUT);
@@ -79,7 +170,7 @@ void setup() {
     }
 
     FastLED.addLeds<APA102, DATA_PIN, CLOCK_PIN, GBR>(leds, NUM_LEDS); //init the LED array
-    autoUpdate = 0;
+    autoUpdate = false;
 }
 
 void loop() {
@@ -94,18 +185,19 @@ void loop() {
   }
 }
 
+// Blocking read for 1 byte from the serial port.
 int serialReadBlocking() {
   int b;
   while ((b = Serial.read()) < 0) { /* Do nothing */ } 
   return b;
 }
 
-// Read a protocol value into (*dest) and return RESULT_GOOD. If a
-// protocol reset byte (PROTO_RESET, which is outside [PROTO_MIN,
-// PROTO_MAX]) is encountered, leave (*dest) unchanged and return
-// RESULT_RESET.  If an error is encountered (any other value less
-// than PROTO_MIN or greater than PROTO_MAX), leave (*dest) unchanged
-// and return RESULT_ERROR.
+// Blocking read for value in serial protocol, catching protocol reset
+// requests.  
+// The value read is stored into (*dest). In the case of a protocol
+// reset or an error, (*dest) is unchanged.
+// Returns RESULT_GOOD when a value is read, or RESULT_RESET for
+// protocol reset, or RESULT_ERROR for protocol errors.
 int serialReadProtocol(struct protoByte *proto)
 {
   int raw = serialReadBlocking();
@@ -119,6 +211,20 @@ int serialReadProtocol(struct protoByte *proto)
   }
 }
 
+// 12-BIT ENCODING
+// Two 6-bit values are specified in two bytes with the most
+// significant first. Each 6-bit value is encoded by adding
+// ENCODE_BASE.
+
+// Value 0 is encoded by '00', value 1 by '01', and so forth to value
+// 4095 encoded by 'oo'.
+
+// Blocking read for a 12-bit integer value from the serial protocol.
+// The value read is stored into (*dest). In the case of a protocol
+// reset, a protocol error, or an encoding error, (*dest) is
+// unchanged.
+// Returns RESULT_GOOD when a value is read; RESULT_RESET for a
+// protocol reset; and RESULT_ERROR for errors in reading or decoding.
 int serialRead12(uint16_t *dest)
 {
   struct protoByte b1, b2;
@@ -132,9 +238,12 @@ int serialRead12(uint16_t *dest)
   return serialDecode12(dest, b1, b2);
 }
 
-// Decode two decoded 6-bit values into a 12-bit value and return
-// RESULT_GOOD. If either decoded 6-bit value falls outside the 6-bit
-// range, return RESULT_ERROR and leave dest unchanged.
+// Decode two bytes into a 12-bit value.
+// The bytes are b1 and b2, in that order.
+// The decoded value is stored into (*dest). In the case of a decoding
+// error, (*dest) is unchanged.
+// Returns RESULT_GOOD when a value is read, or RESULT_ERROR for
+// errors in decoding.
 int serialDecode12(uint16_t *dest, struct protoByte b1, struct protoByte b2)
 {
   uint8_t d1 = b1.pbyte - ENCODE_BASE, d2 = b2.pbyte - ENCODE_BASE;
@@ -146,6 +255,11 @@ int serialDecode12(uint16_t *dest, struct protoByte b1, struct protoByte b2)
   }
 }
 
+// Write a 12-bit value in the serial protocol.
+// The value is given in val, which should fall in the 12-bit value
+// range [0, 4095].
+// Returns RESULT_GOOD when a value is encoded, or RESULT_ERROR for an
+// out-of-range value.
 int serialWrite12(uint16_t val)
 {
   int res;
@@ -159,6 +273,12 @@ int serialWrite12(uint16_t val)
   return RESULT_GOOD;
 }
 
+// Encode a 12-bit value into two bytes.
+// The value is given in val, which should fall between 0 and 4095.
+// The encoded bytes are stored into (*b1) and (*b2). These are left
+// unchanged in the case of an encoding error.
+// Returns RESULT_GOOD when a value is encoded, or RESULT_ERROR for an
+// out-of-range value.
 int serialEncode12(struct protoByte *b1, struct protoByte *b2, uint16_t val)
 {
   if (val > (ENCODE_MASK + (ENCODE_MASK << 6))) {
@@ -171,6 +291,8 @@ int serialEncode12(struct protoByte *b1, struct protoByte *b2, uint16_t val)
 
   return RESULT_GOOD;
 }
+
+// COLOR ENCODING INTO FOUR BYTES
 
 // Encoding of 3x8bit RGB color into 4x6 bit encoding:
 
@@ -185,10 +307,13 @@ int serialEncode12(struct protoByte *b1, struct protoByte *b2, uint16_t val)
 // Green = decoded 00 0f 3c 00 = encoded 30 3f 6c 30 = ascii 0?l0
 // Blue  = decoded 00 00 03 3f = encoded 30 30 33 6f = ascii 003o
 
-// Read 4 bits of encoded CRGB color (through serialReadEncoded),
-// decode it into a CRGB dest, and return RESULT_GOOD. In the case of
-// any non-GOOD results from reading or decoding, leave dest unchanged
-// and return instead the result that arose.
+// Blocking read of a 4-byte encoded color.
+// The decoded color is stored into (*dest), which is left unchanged
+// in the case of a protocol reset or error.
+// When a color is read and decoded, RESULT_GOOD is returned. Protocol
+// resets and errors while reading bytes give result values of
+// RESULT_RESET and RESULT_ERROR, respectively, and in the case of
+// decoding errors, RESULT_ERROR is returned.
 int serialReadRGB(CRGB *dest)
 {
   struct protoByte hs[4];
@@ -201,9 +326,12 @@ int serialReadRGB(CRGB *dest)
   return serialDecodeRGB(dest, hs);
 }
 
-// Decode a 4x6-bit RGB color into a CRGB, dest, and return
-// RESULT_GOOD. If any of the input 6-bit values fall outside the
-// 6-bit range, leave dest unchanged and instead return RESULT_ERROR.
+// Decode a 4-byte encoded color.
+// The encoded bytes are provided in hs.
+// The decoded color is stored into (*dest), which is left unchanged
+// in the case of a decoding error.
+// When a color is successfully decoded, RESULT_GOOD is
+// returned. Otherwise, RESULT_ERROR is returned.
 int serialDecodeRGB(CRGB *dest, struct protoByte hs[4])
 {
   uint8_t h0 = (hs[0].pbyte - ENCODE_BASE);
@@ -220,6 +348,10 @@ int serialDecodeRGB(CRGB *dest, struct protoByte hs[4])
   }
 }
 
+// Read and process one command from the input stream.
+// Return RESULT_GOOD for success, or RESULT_RESET or RESULT_ERROR for
+// protocol resets or errors arising during the reading, execution, or
+// acknowledgement of commands.
 int processCommand()
 {
   struct protoByte b;
@@ -252,14 +384,18 @@ int processCommand()
   }
 }
 
-// Acknowledge a protocol stream reset
+// Acknowledge a protocol reset message by writing a reset
+// acknowledgement byte.
 void protoReset()
 {
   Serial.write(ACK_RESET);
 }
 
-// Send an error acknowledgement and block while reading bytes until a
-// protocol stream reset comes up.
+// Enter a protocol error state.
+// The error state blocks and discards all serial input until a
+// protocol reset byte is present at the head of the serial buffer,
+// but does not consume this reset byte. At the same time, the value
+// of the status pin is toggled in a distinctive ~3s pattern.
 void protoError()
 {
   Serial.write(ACK_ERROR);
@@ -272,14 +408,19 @@ void protoError()
       Serial.read();
     }
 
-    int t = (millis() % 2600) / 100;
+    int t = (millis() % 2800) / 100;
 
-    digitalWrite(STATUS_PIN, (t == 0 || t == 2 || t == 4 || (t >= 6 && t <= 16 && t != 9 && t != 13) || t == 18 || t == 20 || t == 22));
+    digitalWrite(STATUS_PIN, (t == 0 || t == 2 || t == 4 || (t >= 7 && t <= 17 && t != 10 && t != 14) || t == 20 || t == 22 || t == 24));
   } while (1);
   
   digitalWrite(STATUS_PIN, LOW);
 }
 
+// Read and process a single LED update message.
+// b1 is the first byte of the message, which should contain a valid
+// 6-bit encoding.
+// Returns RESULT_GOOD on success, or RESULT_ERROR or RESULT_RESET for
+// errors and protocol resets.
 int commandOne(struct protoByte b1)
 {
   struct protoByte b2;
@@ -311,6 +452,9 @@ int commandOne(struct protoByte b1)
   return RESULT_GOOD;
 }
 
+// Read and process a block LED update message.
+// Returns RESULT_GOOD on success, or RESULT_ERROR or RESULT_RESET for
+// errors and protocol resets.
 int commandBlock()
 {
   int res;
@@ -344,6 +488,8 @@ int commandBlock()
   return RESULT_GOOD;
 }
 
+// Process a blanking message.
+// Returns RESULT_GOOD (i.e., cannot fail).
 int commandBlank(void)
 {
   fill_solid(leds, NUM_LEDS, CRGB::Black);
@@ -356,6 +502,9 @@ int commandBlank(void)
   return RESULT_GOOD;
 }
 
+// Process a query message by replying with the controller ID and number of LEDs.
+// Returns RESULT_GOOD, or RESULT_ERROR in the case of an error
+// encoding the return acknowledgement.
 int commandQuery(void)
 {
   int res;
@@ -368,6 +517,8 @@ int commandQuery(void)
   return serialWrite12(NUM_LEDS);
 }
 
+// Process a blink message.
+// Returns RESULT_GOOD (i.e., cannot fail).
 int commandBlink(void)
 {
   for (int led = 0; led < NUM_LEDS; led++) {
@@ -392,6 +543,8 @@ int commandBlink(void)
   return RESULT_GOOD;
 }
 
+// Process an update message.
+// Returns RESULT_GOOD (i.e., cannot fail).
 int commandUpdate(void)
 {
   FastLED.show();
@@ -399,6 +552,8 @@ int commandUpdate(void)
   return RESULT_GOOD; 
 }
 
+// Process an auto-update message.
+// Returns RESULT_GOOD (i.e., cannot fail).
 int commandAutoUpdate(void)
 {
   autoUpdate = 1;
@@ -407,6 +562,8 @@ int commandAutoUpdate(void)
   return RESULT_GOOD; 
 }
 
+// Process a no-auto-update message.
+// Returns RESULT_GOOD (i.e., cannot fail).
 int commandNoAutoUpdate(void)
 {
   autoUpdate = 0;
