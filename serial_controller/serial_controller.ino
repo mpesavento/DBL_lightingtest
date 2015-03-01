@@ -21,7 +21,7 @@
 // Pin for status LED
 #define STATUS_PIN 13
 
-#define MAX_NUM_LEDS 512
+#define MAX_NUM_LEDS 384
 CRGB leds[MAX_NUM_LEDS];
 bool autoUpdate;
 uint16_t controllerID;
