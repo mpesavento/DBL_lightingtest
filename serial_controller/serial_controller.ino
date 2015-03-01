@@ -1,8 +1,9 @@
+#include <EEPROM.h>
 #include "FastLED.h"
 
 // Per-controller configuration:
-#define CONTROLLER_ID 0x123
-#define NUM_LEDS 300
+#define DEFAULT_CONTROLLER_ID 0xfff
+#define DEFAULT_NUM_LEDS 50
 
 #define SERIAL_SPEED 115200
 
@@ -20,9 +21,14 @@
 // Pin for status LED
 #define STATUS_PIN 13
 
-// This is an array of leds.  One item for each led in your strip.
-CRGB leds[NUM_LEDS];
+#define MAX_NUM_LEDS 512
+CRGB leds[MAX_NUM_LEDS];
 bool autoUpdate;
+uint16_t controllerID;
+uint16_t numLEDs;
+
+#define EEPROM_SIG_LEN 4
+const char eepromSig[] = "DBL1";
 
 // SERIAL PROTOCOL
 
@@ -116,12 +122,21 @@ bool autoUpdate;
 // byte. This unsets auto-update mode on the controller and is
 // acknowledged by ACK_STORED = 0x22 (ASCII '"').
 
+// The EEPROM information update message comprises an 0x7c (ASCII '|')
+// command byte followed by 12-bit encoded controller ID and LED
+// count, respectively. This message causes the controller to update
+// stored EEPROM data for these controller-specific parameters. After
+// updating these values, the controller will acknowledge them with an
+// ACK_IDENT and the updated values as described for the query
+// message.
+
 // Messages 0x28 (ASCII '(') through 0x2f (ASCII '/') and 0x70 (ASCII
-// 'p') through 0x7c (ASCII '|') are available for future expansion;
-// it is advised to avoid using 0x7d for future messages although 0x7d
-// has special significance for controller-to-master messages at
-// present. All acknowledgement values 0x24 (ASCII '$') through 0x7c
-// are available for future expansion. 
+// 'p') through 0x7b (ASCII '{') are available for future expansion;
+// it is advised to avoid using 0x7d for future message command
+// bytess, although 0x7d has special significance only for
+// controller-to-master messages at present. All acknowledgement
+// values 0x24 (ASCII '$') through 0x7c are available for future
+// expansion.
 
 // Serial protocol
 #define PROTO_MIN   0x21
@@ -141,12 +156,13 @@ struct protoByte { uint8_t pbyte; };
 // Commands start master->controller messages with values outside 6-bit encoding
 // Default command is a 12-bit LED index followed by a 24-bit RGB
 #define CMD_BLOCK 0x21 // Followed by 12-bit start, 12-bit end, and N * 24-bit RGB block
-#define CMD_BLANK 0x22 // Followed by nothing
-#define CMD_QUERY 0x23 // Followed by nothing
-#define CMD_BLINK 0x24 // Followed by nothing
+#define CMD_BLANK 0x22 
+#define CMD_QUERY 0x23 
+#define CMD_BLINK 0x24 
 #define CMD_UPDATE 0x25
 #define CMD_AUTOUPDATE 0x26
 #define CMD_NOAUTOUPDATE 0x27
+#define CMD_BURN_INFO 0x7c // Followed by 12-bit controller ID and 12-bit LED count
 
 // Acknowledgements begin controller->master messages
 #define ACK_IDENT 0x21 // Followed by 12-bit controller ID and 12-bit LED count
@@ -160,17 +176,54 @@ struct protoByte { uint8_t pbyte; };
 #define RESULT_ERROR -2
 
 void setup() {
-    // sanity check delay - allows reprogramming if accidently blowing power w/leds
-    pinMode(STATUS_PIN, OUTPUT);
-    for (int i = 0; i < 5; i++) {
-      digitalWrite(STATUS_PIN, HIGH);
-      delay(200);
-      digitalWrite(STATUS_PIN, LOW);
-      delay(200);
-    }
+  // sanity check delay - allows reprogramming if accidently blowing power w/leds
+  pinMode(STATUS_PIN, OUTPUT);
+  for (int i = 0; i < 5; i++) {
+    digitalWrite(STATUS_PIN, HIGH);
+    delay(200);
+    digitalWrite(STATUS_PIN, LOW);
+    delay(200);
+  }
 
-    FastLED.addLeds<APA102, DATA_PIN, CLOCK_PIN, GBR>(leds, NUM_LEDS); //init the LED array
-    autoUpdate = false;
+  if (numLEDs > MAX_NUM_LEDS) {
+    for (int i = 0; i < 10; i++) {
+      digitalWrite(STATUS_PIN, HIGH);
+      delay(100);
+      digitalWrite(STATUS_PIN, LOW);
+      delay(100);
+    }
+    numLEDs = MAX_NUM_LEDS;
+  }
+  
+  FastLED.addLeds<APA102, DATA_PIN, CLOCK_PIN, GBR>(leds, numLEDs); //init the LED array
+  autoUpdate = false;
+}
+
+// Read controller-specific parameters (ID and LED count) from EEPROM
+// and update the global variables. These parameters are written as an
+// EEPROM "signature" followed by two uint16_t values, controllerID
+// and LED count in order. If the EEPROM "signature" match fails, as
+// will happen on a naive controller, then compile-time default values
+// are returned instead.
+void eepromReadConfig()
+{
+  unsigned int eepromOffset;
+  boolean eepromSigMatch = true;
+  for (eepromOffset = 0; eepromOffset < EEPROM_SIG_LEN; eepromOffset++) {
+    eepromSigMatch &= (EEPROM.read(eepromOffset) == eepromSig[eepromOffset]);
+  }
+
+  if (eepromSigMatch) {
+    for (unsigned int i = 0; i < sizeof(uint16_t); i++, eepromOffset++) {
+      ((byte*) (&controllerID))[i] = EEPROM.read(eepromOffset);
+    }
+    for (unsigned int i = 0; i < sizeof(uint16_t); i++, eepromOffset++) {
+      ((byte*) (&numLEDs))[i] = EEPROM.read(eepromOffset);
+    }
+  } else {
+    controllerID = DEFAULT_CONTROLLER_ID;
+    numLEDs = DEFAULT_NUM_LEDS;
+  }
 }
 
 void loop() {
@@ -378,6 +431,8 @@ int processCommand()
       return commandAutoUpdate();
     case CMD_NOAUTOUPDATE:
       return commandNoAutoUpdate();
+    case CMD_BURN_INFO:
+      return commandBurnInfo();
     default:
       return RESULT_ERROR;
     }
@@ -434,7 +489,7 @@ int commandOne(struct protoByte b1)
     return res;
   }
 
-  if (ledno >= NUM_LEDS) {
+  if (ledno >= numLEDs) {
     return RESULT_ERROR;
   }
 
@@ -467,7 +522,7 @@ int commandBlock()
     return res;
   }
 
-  if ((ledlo > ledhi) || (ledhi >= NUM_LEDS)) {
+  if ((ledlo > ledhi) || (ledhi >= numLEDs)) {
     return RESULT_ERROR;
   }
 
@@ -492,7 +547,7 @@ int commandBlock()
 // Returns RESULT_GOOD (i.e., cannot fail).
 int commandBlank(void)
 {
-  fill_solid(leds, NUM_LEDS, CRGB::Black);
+  fill_solid(leds, numLEDs, CRGB::Black);
   if (autoUpdate) {
     FastLED.show();
     Serial.write(ACK_UPDATED);
@@ -511,17 +566,17 @@ int commandQuery(void)
   
   Serial.write(ACK_IDENT);
 
-  if ((res = serialWrite12(CONTROLLER_ID)) != RESULT_GOOD) {
+  if ((res = serialWrite12(controllerID)) != RESULT_GOOD) {
     return res; 
   }
-  return serialWrite12(NUM_LEDS);
+  return serialWrite12(numLEDs);
 }
 
 // Process a blink message.
 // Returns RESULT_GOOD (i.e., cannot fail).
 int commandBlink(void)
 {
-  for (int led = 0; led < NUM_LEDS; led++) {
+  for (int led = 0; led < numLEDs; led++) {
     leds[led].r ^= 0xff;
     leds[led].g ^= 0xff;
     leds[led].b ^= 0xff;
@@ -531,7 +586,7 @@ int commandBlink(void)
 
   delay(1000);
 
-  for (int led = 0; led < NUM_LEDS; led++) {
+  for (int led = 0; led < numLEDs; led++) {
     leds[led].r ^= 0xff;
     leds[led].g ^= 0xff;
     leds[led].b ^= 0xff;
@@ -569,4 +624,52 @@ int commandNoAutoUpdate(void)
   autoUpdate = 0;
   Serial.write(ACK_STORED);
   return RESULT_GOOD; 
+}
+
+// Process a message to update on-board controller-specific
+// configuration. Read a new controller ID and LED count from the
+// message and validate them: the controller ID cannot match the
+// compiled-in default value and the LED count cannot exceed the
+// compile-time maximum LED count. Store new parameters in EEPROM,
+// update global settings from the EEPROM values, and send an
+// acknowledgement containing the values read from EEPROM.
+// Returns RESULT_GOOD on success; RESULT_RESET for a protocol reset
+// mid-stream; and RESULT_ERROR for errors in reading, decoding, or
+// validating the message
+int commandBurnInfo(void)
+{
+  int res;
+  uint16_t cid, nled;
+
+  if ((res = serialRead12(&cid)) != RESULT_GOOD) {
+    return res;
+  }
+  if ((res = serialRead12(&nled)) != RESULT_GOOD) {
+    return res;
+  }
+
+  if (cid == DEFAULT_CONTROLLER_ID || nled > MAX_NUM_LEDS) {
+    return RESULT_ERROR;
+  }
+
+  unsigned int eepromOffset;
+  for (eepromOffset = 0; eepromOffset < EEPROM_SIG_LEN; eepromOffset++) {
+    EEPROM.write(eepromOffset, eepromSig[eepromOffset]);
+  }
+  for (unsigned int i = 0; i < sizeof(uint16_t); i++, eepromOffset++) {
+    EEPROM.write(eepromOffset, ((byte*) (&cid))[i]);
+  }
+  for (unsigned int i = 0; i < sizeof(uint16_t); i++, eepromOffset++) {
+    EEPROM.write(eepromOffset, ((byte*) (&nled))[i]);
+  }
+  
+  eepromReadConfig();
+
+  Serial.write(ACK_IDENT);
+
+  if ((res = serialWrite12(controllerID)) != RESULT_GOOD) {
+    return res; 
+  }
+  return serialWrite12(numLEDs);
+
 }
