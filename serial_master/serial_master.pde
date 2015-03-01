@@ -5,7 +5,7 @@ Controller port;
 void setup() { 
   size(200, 200); 
   noStroke(); 
-  frameRate(50); 
+  frameRate(10); 
   // Open the port that the board is connected to and use the same speed (9600 bps)
 
   println(Serial.list());
@@ -17,21 +17,24 @@ final float period = 2000; // milliseconds
 
 int lastMillis = 0;
 int lastBytes = 0;
-int lastNUpd = 0;
-
-int nUpd = 0;
+int lastQueueSize = 0;
 
 void draw() {
   if (millis() > lastMillis + 1000) {
     float dur = ((float) (millis() - lastMillis)) / 1000.0;
     int newBytes = port.bytesSent();
-    println("Sent " + (newBytes - lastBytes) + " in " + dur + " seconds = " + (((float) (newBytes - lastBytes)) / dur));
-    println("Sent " + (nUpd - lastNUpd) + " in " + dur + " seconds = " + (((float) (nUpd - lastNUpd)) / dur));
+    int newQueueSize = port.queueSize();
+
+    int dBytes = newBytes - lastBytes;
+    float byteRate = ((float) (newBytes - lastBytes)) / dur;
+    int dQueue = newQueueSize - lastQueueSize;
+
+    println("Sent " + dBytes + " in " + dur + " seconds = " + byteRate + "; queue grew by " + dQueue + " to " + newQueueSize);
+
     lastMillis = millis();
-    lastBytes = port.bytesSent();
-    lastNUpd = nUpd;  
+    lastBytes = newBytes;
+    lastQueueSize = newQueueSize;
   }
-  nUpd++;
 
   boolean mouseOver = mouseOverRect();
 
