@@ -395,7 +395,7 @@ void protoReset()
 // The error state blocks and discards all serial input until a
 // protocol reset byte is present at the head of the serial buffer,
 // but does not consume this reset byte. At the same time, the value
-// of the status pin is toggled in a distinctive ~3s pattern.
+// of the status pin is toggled in a distinctive repeating pattern.
 void protoError()
 {
   Serial.write(ACK_ERROR);
@@ -408,9 +408,9 @@ void protoError()
       Serial.read();
     }
 
-    int t = (millis() % 2800) / 100;
+    int t = (millis() % 1700) / 50;
 
-    digitalWrite(STATUS_PIN, (t == 0 || t == 2 || t == 4 || (t >= 7 && t <= 17 && t != 10 && t != 14) || t == 20 || t == 22 || t == 24));
+    digitalWrite(STATUS_PIN, (t == 0 || t == 2 || t == 4 || (t >= 8 && t <= 18 && t != 11 && t != 15) || t == 22 || t == 24 || t == 26));
   } while (1);
   
   digitalWrite(STATUS_PIN, LOW);
