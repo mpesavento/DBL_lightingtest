@@ -71,11 +71,14 @@ extends Serial
     color colors[] = new color[nled];
     currentState = new ControllerState(colors, colors, false);
     finalState = currentState;
+    connected = true;
   }
 
   private void enqueueCommand(Command c)
   {
+    /* Debug enqueueing
     println("Enqueueing " + c.getClass().getName() + " while running = " + ((runningCommand == null) ? "(null)" : runningCommand.getClass().getName()));
+    */
     if (!isConnected()) {
       println(isBroken() ? "Connection broken, not enqueueing commands!" : "Not connected, not enqueueing commands!");
     }
@@ -135,6 +138,8 @@ extends Serial
       chunkStart = chunkEnd + 1;
     }
   }
+  
+  public void sendUpdate() { enqueueCommand(new CommandUpdate()); }
 
   void write(byte buffer[]) {
     for (int i = 0; i < buffer.length; i++) {
@@ -144,13 +149,13 @@ extends Serial
     }
     super.write(buffer);
 
-    print(buffer.length + " bytes:");
     /* Debug hex buffer contents
+    print(buffer.length + " bytes:");
      for (int i = 0; i < buffer.length; i++) {
      print(Integer.toHexString(buffer[i]) + " ");
      } 
-     */
     println();
+     */
     /* Debug literal buffer representation
      for (int i = 0; i < buffer.length; i++) {
      print(char(buffer[i]));
@@ -161,12 +166,9 @@ extends Serial
 
   private void beginCommand(Command c)
   {
-    if (!isConnected()) {
-      println((isBroken() ? "Connection broken" : "Not connected") + ", not starting new commands!"); 
-      return;
-    }
-
+    /* Debug commands
     println("Beginning command " + c.getClass().getName());
+    */
     synchronized(this) {
       runningCommand = c;
       commandStart = millis();
@@ -182,15 +184,16 @@ extends Serial
   private void finishCommand()
   {
     synchronized (this) {
-      print("Finished command " + runningCommand.getClass().getName());
+      long commandEnd = millis(), commandTime = commandEnd - commandStart;
+      commandStart = -1;
+      /* Debug command finishing
+      println("Finished command " + runningCommand.getClass().getName() + ", time: " + ((float) commandTime) / 1000.0);
+      */
       ackTimer.cancel();
       ackTimer = null;
       runningCommand = null;
       resetting = false;
       connected = true;
-      long commandEnd = millis(), commandTime = commandEnd - commandStart;
-      commandStart = -1;
-      println("time: " + ((float) commandTime) / 1000.0);
       Command next = commandQueue.poll();
       if (next != null) {        
         beginCommand(next);
