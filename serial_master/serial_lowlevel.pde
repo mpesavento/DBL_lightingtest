@@ -17,75 +17,114 @@ extends Serial
   public final byte commandBlank = 0x22;
   public final byte commandQuery = 0x23;
   public final byte commandBlink = 0x24;
+  public final byte commandUpdate = 0x25;
+  public final byte commandAutoUpdate = 0x26;
+  public final byte commandNoAutoUpdate = 0x27;
 
   public final byte ackReset = 0x7e;
-  public final byte ackOkay  = 0x21;
-  public final byte ackIdent = 0x22;
+  public final byte ackIdent = 0x21;
+  public final byte ackStored = 0x22;
+  public final byte ackUpdated = 0x23;
   public final byte ackError = 0x7d;
 
   final int maxBufLen = 64;
 
   final long ackTimeout = 2000; // milliseconds
 
+  public class ControllerState
+  {
+    public final color displayedColors[];
+    public final color storedColors[];
+    public boolean autoUpdate;
+
+    ControllerState(color dc[], color sc[], boolean au) { 
+      displayedColors = dc; 
+      storedColors = sc; 
+      autoUpdate = au;
+    }
+  }
+
   private int controllerID = -1;
-  private color currColors[];
+  private ControllerState currentState;
+  private ControllerState finalState;
   private LinkedList<Command> commandQueue = new LinkedList();
   private Command runningCommand = null;
   private long commandStart = -1;
   private Timer ackTimer = null;
   private boolean resetting = false;
   private boolean connected = false;
+  private int bytesSent;
+  private int messagesSent;
 
   Controller(PApplet parent, String portName, int baudRate) 
   { 
     super(parent, portName, baudRate);
-    currColors = null; 
+    currentState = null;
+    finalState = null;
 
     beginCommand(new CommandQuery());
   } 
 
+  private void completeConnection(int cid, int nled)
+  {
+    controllerID = cid;
+    color colors[] = new color[nled];
+    currentState = new ControllerState(colors, colors, false);
+    finalState = currentState;
+  }
+
   private void enqueueCommand(Command c)
   {
     println("Enqueueing " + c.getClass().getName() + " while running = " + ((runningCommand == null) ? "(null)" : runningCommand.getClass().getName()));
-    if (isBroken()) {
-     println("Connection broken, not enqueueing new commands!");
-     return; 
+    if (!isConnected()) {
+      println(isBroken() ? "Connection broken, not enqueueing commands!" : "Not connected, not enqueueing commands!");
     }
     synchronized(this) {
+      finalState = c.stateTransform(finalState); 
+
       if (runningCommand == null) {
-        beginCommand(c); 
+        beginCommand(c);
       } else {
-        commandQueue.addLast(c); 
+        commandQueue.addLast(c);
       }
-    } 
+    }
   }
 
-  public boolean isBroken() { return !connected && resetting; }
-  public boolean isConnected() { return connected; }
-  
+  public boolean isBroken() { 
+    return !connected && resetting;
+  }
+  public boolean isConnected() { 
+    return connected;
+  }
+
   public int numberOfLEDs() {
-    if (currColors == null) {
-      return -1; 
+    if (!isConnected()) {
+      return -1;
     } else {
-      return currColors.length;   
+      return currentState.storedColors.length;
     }
   }
-  
-  public final color[] currentColors() { return currColors; }
 
-  public void sendBlank() { enqueueCommand(new CommandBlank()); }
-  
+  public final ControllerState currentState() { return currentState; }  
+  public final ControllerState finalState() { return finalState; }
+  public int bytesSent() { return bytesSent; }
+  public int messagesSent() { return messagesSent; }
+
+  public void sendBlank() { 
+    enqueueCommand(new CommandBlank());
+  }
+
   public void sendNewColors(color upd[]) {
-    if (upd.length != currColors.length) {
-       throw new RuntimeException("New color length " + upd.length + " != " + currColors.length);
+    if (upd.length != numberOfLEDs()) {
+      throw new RuntimeException("New color length " + upd.length + " != " + numberOfLEDs());
     }
-    
+
     int chunkSize = (maxBufLen - 5) / 4;
     int chunkStart = 0;
     while (chunkStart < upd.length) {
       int chunkEnd = chunkStart + chunkSize - 1;
       if (chunkEnd >= upd.length) {
-        chunkEnd = upd.length - 1; 
+        chunkEnd = upd.length - 1;
       }
       int len = 1 + chunkEnd - chunkStart;
       color chunkColor[] = new color[len];
@@ -94,36 +133,36 @@ extends Serial
       }
       enqueueCommand(new CommandBlock(chunkStart, chunkColor));
       chunkStart = chunkEnd + 1;
-    }    
+    }
   }
 
   void write(byte buffer[]) {
     for (int i = 0; i < buffer.length; i++) {
       if (buffer[i] < 0x21 || buffer[i] > 0x7e) {
         println("BAD BYTE AT " + i + ": " + Integer.toHexString(buffer[i]));
-      } 
+      }
     }
     super.write(buffer);
 
     print(buffer.length + " bytes:");
     /* Debug hex buffer contents
-    for (int i = 0; i < buffer.length; i++) {
-      print(Integer.toHexString(buffer[i]) + " ");
-    } 
-    */
+     for (int i = 0; i < buffer.length; i++) {
+     print(Integer.toHexString(buffer[i]) + " ");
+     } 
+     */
     println();
     /* Debug literal buffer representation
-    for (int i = 0; i < buffer.length; i++) {
-      print(char(buffer[i]));
-    }
-    println();
-    */
+     for (int i = 0; i < buffer.length; i++) {
+     print(char(buffer[i]));
+     }
+     println();
+     */
   }
 
   private void beginCommand(Command c)
   {
-    if (isBroken()) {
-      println("Connection broken, not starting new commands!"); 
+    if (!isConnected()) {
+      println((isBroken() ? "Connection broken" : "Not connected") + ", not starting new commands!"); 
       return;
     }
 
@@ -133,6 +172,8 @@ extends Serial
       commandStart = millis();
       byte buffer[] = runningCommand.encode();
       write(buffer);
+      bytesSent += buffer.length;
+      messagesSent++;
       ackTimer = new Timer(true);
       ackTimer.schedule(new CommandTimeout(), ackTimeout);
     }
@@ -184,7 +225,7 @@ extends Serial
       if (isBroken()) {
         println("Connection broken");
       } else {
-        connectionReset();        
+        connectionReset();
       }
     }
   }
@@ -192,14 +233,14 @@ extends Serial
   public void serialEvent(SerialPortEvent event)
   {
     super.serialEvent(event);
-    
+
     if (isBroken()) {
-     println("Connection broken, ignoring further input");
-     return; 
+      println("Connection broken, ignoring further input");
+      return;
     }
-    
+
     // println("Serial event! available = " + available());
-    while (available() > 0) {
+    while (available () > 0) {
       synchronized (this) {
         int b = read();
         // println("Received byte " + Integer.toHexString(b));
@@ -266,10 +307,10 @@ extends Serial
     buffer[pos + 3] = byte(encodeBase + (b & 0x3f));
 
     /* Debug RGB encoding
-    print(Integer.toHexString(c) + " => " + Integer.toHexString(r) + "," + Integer.toHexString(g) + "," + Integer.toHexString(b) + " => ");    
-    for (int i = 0; i < 3; i++) { print(Integer.toHexString(buffer[pos + i]) + ","); }
-    println(Integer.toHexString(buffer[pos+3]));
-    */
+     print(Integer.toHexString(c) + " => " + Integer.toHexString(r) + "," + Integer.toHexString(g) + "," + Integer.toHexString(b) + " => ");    
+     for (int i = 0; i < 3; i++) { print(Integer.toHexString(buffer[pos + i]) + ","); }
+     println(Integer.toHexString(buffer[pos+3]));
+     */
   }
 
   class SerialDecodeException
@@ -296,34 +337,44 @@ extends Serial
   abstract class Command {
     abstract byte[] encode();
     abstract boolean ackByte(Controller c, byte b) throws BadAckException;
+    abstract ControllerState stateTransform(ControllerState cs);
   }
 
   public class CommandOne
     extends Command
   {
-    int ledNo;
-    color col;
+    final int ledNo;
+    final color col;
+    final byte encoding[];
 
     CommandOne(int l, color c) { 
       ledNo = l; 
       col = c;
+      encoding = new byte[6];
+      serialEncode12(encoding, 0, ledNo);
+      serialEncodeRGB(encoding, 2, col);
     }
 
-    byte[] encode() {
-      byte buffer[] = new byte[6];
-      serialEncode12(buffer, 0, ledNo);
-      serialEncodeRGB(buffer, 2, col);
-      return buffer;
+    byte[] encode() { return encoding; }
+
+    ControllerState stateTransform(ControllerState cs0)
+    {
+      color storedNew[] = new color[cs0.storedColors.length];
+      System.arraycopy(cs0.storedColors, 0, storedNew, 0, cs0.storedColors.length);
+      storedNew[ledNo] = col;
+      color displayNew[] = (cs0.autoUpdate ? storedNew : cs0.displayedColors);
+      return new ControllerState(storedNew, displayNew, cs0.autoUpdate);
     }
 
     boolean ackByte(Controller c, byte b) 
       throws BadAckException
     {
-      if (b == ackOkay) {
-        c.currColors[ledNo] = col;
+      byte expectedAck = (currentState.autoUpdate ? ackUpdated : ackStored);
+      if (b == expectedAck) {
+        currentState = stateTransform(currentState);
         return true;
       } else {
-        throw new BadAckException(this, ackOkay, b);
+        throw new BadAckException(this, expectedAck, b);
       }
     }
   }
@@ -331,38 +382,47 @@ extends Serial
   public class CommandBlock 
     extends Command
   {
-    int ledLo;
-    color cols[]; 
+    final int ledLo;
+    final color cols[];
+    final byte encoding[];
 
     CommandBlock(int l, color c[]) { 
       ledLo = l; 
       cols = c;
-    }
-
-    byte[] encode() {
-      byte buffer[] = new byte[5 + 4*cols.length];
-      buffer[0] = commandBlock;
-      serialEncode12(buffer, 1, ledLo);
-      serialEncode12(buffer, 3, (ledLo + cols.length - 1));
+      encoding = new byte[5 + 4*cols.length];
+      encoding[0] = commandBlock;
+      serialEncode12(encoding, 1, ledLo);
+      serialEncode12(encoding, 3, (ledLo + cols.length - 1));
       for (int i = 0; i < cols.length; i++) {
-        serialEncodeRGB(buffer, 5 + 4 * i, cols[i]);
+        serialEncodeRGB(encoding, 5 + 4 * i, cols[i]);
       }
-      return buffer;
     }
 
-//    int encodedLength(int ncols) { return 5 + 4*ncols; }
-//    int maxColorsForLength(int maxlen) { return (maxlen - 5)/4; }
+    byte[] encode() { return encoding; }
+
+    //    int encodedLength(int ncols) { return 5 + 4*ncols; }
+    //    int maxColorsForLength(int maxlen) { return (maxlen - 5)/4; }
+
+    ControllerState stateTransform(ControllerState cs0)
+    {
+      color storedNew[] = new color[cs0.storedColors.length];
+      System.arraycopy(cs0.storedColors, 0, storedNew, 0, cs0.storedColors.length);
+      for (int i = 0; i < cols.length; i++) {
+        storedNew[ledLo + i] = cols[i];
+      } 
+      color displayNew[] = (cs0.autoUpdate ? storedNew : cs0.displayedColors);
+      return new ControllerState(storedNew, displayNew, cs0.autoUpdate);
+    }
 
     boolean ackByte(Controller c, byte b) 
       throws BadAckException
     {
-      if (b == ackOkay) {
-        for (int i = 0; i < cols.length; i++) {
-          c.currColors[ledLo + i] = cols[i];
-        } 
+      byte expectedAck = (currentState.autoUpdate ? ackUpdated : ackStored);
+      if (b == expectedAck) {
+        currentState = stateTransform(currentState);
         return true;
       } else {
-        throw new BadAckException(this, ackOkay, b);
+        throw new BadAckException(this, expectedAck, b);
       }
     }
   }
@@ -370,28 +430,27 @@ extends Serial
   class CommandBlank
     extends Command
   {
-    CommandBlank() {
-    }
+    final byte encoding[] = { commandBlank };
+    CommandBlank() { }
 
-    byte[] encode() { 
-      byte buffer[] = new byte[1];
-      buffer[0] = commandBlank;
-      return buffer;
-    }  
+    byte[] encode() { return encoding; }
 
-    void finish(Controller c) {
-    }
+    ControllerState stateTransform(ControllerState cs0)
+    {
+      color storedNew[] = new color[cs0.storedColors.length];
+      color displayNew[] = (cs0.autoUpdate ? storedNew : cs0.displayedColors);
+      return new ControllerState(storedNew, displayNew, cs0.autoUpdate);
+    }    
 
     boolean ackByte(Controller c, byte b) 
       throws BadAckException
     {
-      if (b == ackOkay) {
-        for (int i = 0; i < c.currColors.length; i++) {
-          c.currColors[i] = color(0, 0, 0);
-        }
+      byte expectedAck = (currentState.autoUpdate ? ackUpdated : ackStored);
+      if (b == expectedAck) {
+        currentState = stateTransform(currentState);
         return true;
       } else {
-        throw new BadAckException(this, ackOkay, b);
+        throw new BadAckException(this, expectedAck, b);
       }
     }
   }
@@ -401,14 +460,10 @@ extends Serial
   {
     byte response[] = new byte[5];
     int respNext = 0;
-    CommandQuery() {
-    }
+    final byte encoding[] = { commandQuery };
+    CommandQuery() { }
 
-    byte[] encode() {
-      byte buffer[] = new byte[1];
-      buffer[0] = commandQuery;
-      return buffer;
-    }
+    byte[] encode() { return encoding; }
 
     boolean ackByte(Controller c, byte b) 
       throws BadAckException
@@ -423,20 +478,19 @@ extends Serial
           int cid = serialDecode12(response, 1);
           int nled = serialDecode12(response, 3);
 
-          if (c.controllerID == -1) {
-            c.controllerID = cid;
-          } else if (c.controllerID != cid) {
-            throw new BadAckException(this.getClass().getName() + ": Controller ID changed from " + c.controllerID + " to " + cid);
-          }
-
-          if (c.currColors == null) {
-            c.currColors = new color[nled];
-          } else if (c.currColors.length != nled) {
-            throw new BadAckException(this.getClass().getName() + ": Controller #LEDs changed from " + c.currColors.length + " to " + nled);
+          if (isConnected()) {
+            if (c.controllerID != cid) {
+              throw new BadAckException(this.getClass().getName() + ": Controller ID changed from " + c.controllerID + " to " + cid);
+            }
+            if (nled != c.currentState.storedColors.length) {
+              throw new BadAckException(this.getClass().getName() + ": Controller #LEDs changed from " + c.currentState.storedColors.length + " to " + nled);
+            }
+          } else {
+            completeConnection(cid, nled); 
           }
 
           println("Controller ID = " + Integer.toHexString(cid));
-          println("# LEDs = " + nled);
+          println("Number of LEDs = " + nled);
 
           return true;
         } 
@@ -447,29 +501,51 @@ extends Serial
         return false;
       }
     }
+
+    ControllerState stateTransform(ControllerState cs0) { return cs0; }
   }
 
   class CommandReset
     extends Command
   {
-    CommandReset() {
-    }
+    final byte encoding[] = { protoReset };
 
-    byte[] encode() {
-      byte buffer[] = new byte[1];
-      buffer[0] = protoReset;
-      return buffer;
-    }
+    CommandReset() { }
 
+    byte[] encode() { return encoding; }
+    ControllerState stateTransform(ControllerState cs0) { return cs0; }
     boolean ackByte(Controller c, byte b) 
       throws BadAckException
     {
       if (b == ackReset) {
-       c.resetting = false;
-       return true; 
+        c.resetting = false;
+        return true;
       }
       return false;
     }
+  }
+
+  class CommandUpdate
+    extends Command
+  {
+    private final byte encoding[] = { commandUpdate };
+    CommandUpdate() { }
+    byte[] encode() { return encoding; }
+    ControllerState stateTransform(ControllerState cs0)
+    {
+      return new ControllerState(cs0.storedColors, cs0.storedColors, cs0.autoUpdate); 
+    }
+    boolean ackByte(Controller c, byte b) 
+      throws BadAckException
+    {
+      if (b == ackUpdated) {
+        currentState = stateTransform(currentState);
+        return true;
+      } else {
+        throw new BadAckException(this, ackUpdated, b);
+      }
+    }
+
   }
 }
 

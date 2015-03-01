@@ -5,8 +5,6 @@
 // #define FORCE_SOFTWARE_PINS
 #include "FastLED.h"
 
-
-
 ///////////////////////////////////////////////////////////////////////////////////////////
 //
 // Move a white dot along the strip of leds.  This program simply shows how to configure the leds,
@@ -18,7 +16,7 @@
 #define CONTROLLER_ID 0x123
 
 // How many leds are in the strip?
-#define NUM_LEDS 100
+#define NUM_LEDS 300
 
 // Data pin that led data will be written out over
 #define DATA_PIN 12
@@ -31,6 +29,7 @@
 
 // This is an array of leds.  One item for each led in your strip.
 CRGB leds[NUM_LEDS];
+bool autoUpdate;
 
 // Serial protocol
 #define PROTO_MIN   0x21
@@ -53,11 +52,15 @@ struct protoByte { uint8_t pbyte; };
 #define CMD_BLANK 0x22 // Followed by nothing
 #define CMD_QUERY 0x23 // Followed by nothing
 #define CMD_BLINK 0x24 // Followed by nothing
+#define CMD_UPDATE 0x25
+#define CMD_AUTOUPDATE 0x26
+#define CMD_NOAUTOUPDATE 0x27
 
 // Acknowledgements begin controller->master messages
 #define ACK_RESET 0x7e  
-#define ACK_OKAY  0x21 
-#define ACK_IDENT 0x22 // Followed by 12-bit controller ID and 12-bit LED count
+#define ACK_IDENT 0x21 // Followed by 12-bit controller ID and 12-bit LED count
+#define ACK_STORED 0x22
+#define ACK_UPDATED 0x23
 #define ACK_ERROR 0x7d // Error during decoding
 
 #define RESULT_GOOD 1
@@ -76,6 +79,7 @@ void setup() {
     }
 
     FastLED.addLeds<APA102, DATA_PIN, CLOCK_PIN, GBR>(leds, NUM_LEDS); //init the LED array
+    autoUpdate = 0;
 }
 
 void loop() {
@@ -236,6 +240,12 @@ int processCommand()
       return commandQuery();
     case CMD_BLINK:
       return commandBlink();
+    case CMD_UPDATE:
+      return commandUpdate();
+    case CMD_AUTOUPDATE:
+      return commandAutoUpdate();
+    case CMD_NOAUTOUPDATE:
+      return commandNoAutoUpdate();
     default:
       return RESULT_ERROR;
     }
@@ -290,8 +300,15 @@ int commandOne(struct protoByte b1)
   if ((res = serialReadRGB(&(leds[ledno]))) != RESULT_GOOD) {
     return res;
   }
-  FastLED.show();
-  Serial.write(ACK_OKAY);
+
+  if (autoUpdate) {
+    FastLED.show();
+    Serial.write(ACK_UPDATED);
+  } else {
+    Serial.write(ACK_STORED); 
+  }
+  
+  return RESULT_GOOD;
 }
 
 int commandBlock()
@@ -316,15 +333,27 @@ int commandBlock()
       break;
     }
   }
-  FastLED.show();
-  Serial.write(ACK_OKAY);
+  
+  if (autoUpdate) {
+    FastLED.show();
+    Serial.write(ACK_UPDATED);
+  } else {
+    Serial.write(ACK_STORED); 
+  }
+  
+  return RESULT_GOOD;
 }
 
 int commandBlank(void)
 {
   fill_solid(leds, NUM_LEDS, CRGB::Black);
-  FastLED.show();
-  Serial.write(ACK_OKAY);
+  if (autoUpdate) {
+    FastLED.show();
+    Serial.write(ACK_UPDATED);
+  } else {
+    Serial.write(ACK_STORED);
+  }
+  return RESULT_GOOD;
 }
 
 int commandQuery(void)
@@ -359,7 +388,28 @@ int commandBlink(void)
 
   FastLED.show();
 
-  Serial.write(ACK_OKAY);
+  Serial.write(ACK_UPDATED);
   return RESULT_GOOD;
 }
 
+int commandUpdate(void)
+{
+  FastLED.show();
+  Serial.write(ACK_UPDATED);
+  return RESULT_GOOD; 
+}
+
+int commandAutoUpdate(void)
+{
+  autoUpdate = 1;
+  FastLED.show();
+  Serial.write(ACK_UPDATED);
+  return RESULT_GOOD; 
+}
+
+int commandNoAutoUpdate(void)
+{
+  autoUpdate = 0;
+  Serial.write(ACK_STORED);
+  return RESULT_GOOD; 
+}
