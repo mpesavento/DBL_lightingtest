@@ -82,11 +82,26 @@ extends Serial
     }
   }
 
+    /**
+     * Receive notifications of events involving the command queue.
+     */
+    public abstract class QueueWatcher
+    {
+	/**
+	 * Command queue is emptied, that is, a command is finished
+	 * with no other commands on the queue.
+	 */
+	abstract void queueEmpty(Controller c);
+
+	// XXX Call-back to watch for queue growing too big?
+    }
+
     private int controllerID = -1;
     private int numberOfLEDs = -1;
     private ControllerState currentState;
     private ControllerState finalState;
     private LinkedList<Command> commandQueue = new LinkedList();
+    private LinkedList<QueueWatcher> queueWatchers = new LinkedList();
     private Command runningCommand = null;
     private long commandStart = -1;
     private Timer ackTimer = null;
@@ -203,6 +218,15 @@ extends Serial
     public int queueSize() { return commandQueue.size(); }
 
     /**
+     * Monitor command queue status.
+     * @param qw Observer to receive notifications of the queue status.
+     */
+    public void addQueueWatcher(QueueWatcher qw)
+    {
+	queueWatchers.addLast(qw);
+    }
+
+    /**
      * Blank the controller, i.e., set all stored LED colors to black
      * / off.  <p> Blanking will propagate to physical LEDs only after
      * an update; if auto-update mode is set, this will happen
@@ -302,6 +326,10 @@ extends Serial
 	    Command next = commandQueue.poll();
 	    if (next != null) {        
 		beginCommand(next);
+	    } else {
+		for (QueueWatcher qw: queueWatchers) {
+		    qw.queueEmpty(this);
+		}
 	    }
 	}
     }
