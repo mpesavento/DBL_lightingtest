@@ -83,6 +83,8 @@ def command(argspl):
         raise Exception("Unknown command in " + repr(argspl))
     return (commandDict[argspl[0]])(argspl)
 
+final = "";
+
 for argstr in sys.argv[1:len(sys.argv)]:
     argspl = argstr.split(",")
     try:
@@ -90,5 +92,8 @@ for argstr in sys.argv[1:len(sys.argv)]:
         hexstrs = map(hex, buf)
         chrs = map(chr,buf)
         print argstr,"=>",string.join(hexstrs),"=",string.join(chrs,sep='')
+        final = final + string.join(chrs, sep='')
     except Exception as e:
         print "Error encoding",format(argstr),":",e.message
+
+print final
