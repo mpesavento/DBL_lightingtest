@@ -29,7 +29,7 @@ float theta = 0; //not used, for rotating along Z?
 /* this is waaaay more complicated than it needs to be! */
 float XSPIN_RATE = 0; // 0.008
 float ZSPIN_RATE = 0.01; // 0.008
-int WIGGLE_MAX = 200;
+int WIGGLE_RATE = 200;
 
 float spinx = 0; //object spin rate, X
 float spinz = ZSPIN_RATE;
