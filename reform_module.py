@@ -7,8 +7,13 @@ import csv
 #reads the node positions file and saves the xyz of each node/segment
 segs = {}
 count = 0
-sys.argv[1]="node_info.csv"
-for line in open(sys.argv[1], "r").xreadlines():
+print(sys.argv)
+if len(sys.argv) > 1:
+    nodefile = sys.argv[1]
+else:
+    nodefile="node_info.csv"
+    
+for line in open(nodefile, "r").xreadlines():
    vals = line.rstrip().split(",")
    if len(vals)<6: continue
    seg = vals[0]
@@ -18,7 +23,7 @@ for line in open(sys.argv[1], "r").xreadlines():
    segs[seg] = {"fx":x,"fy":y,"fz":z}
 
 fs = {}
-for line in open(sys.argv[1], "r").xreadlines():
+for line in open(nodefile, "r").xreadlines():
    vals = line.rstrip().split(",")
    if len(vals)<6: continue
    pair = 4
@@ -49,9 +54,14 @@ for line in open(sys.argv[1], "r").xreadlines():
 
 module_nodes=["ERA","RIB","IRE","FOG","LAW","GIG","EVE","TAU","OLD","LIE"]
 #full path
+<<<<<<< HEAD
 #module_path=["LIE","TAU","FOG","RIB","ERA","IRE","GIG","LIE","OLD","TAU","LAW","OLD","FOG","LAW","RIB","IRE","LAW","ERA","GIG","LAW","LIE","EVE","OLD","EVE","GIG","EVE","IRE"]
 #test path
 module_path=["LIE","TAU","FOG","LAW","EVE","OLD","LIE"]
+=======
+module_path=["LIE","TAU","FOG","RIB","ERA","IRE","GIG","LIE","OLD","TAU","LAW","OLD","FOG","LAW","RIB","IRE","LAW","ERA","GIG","LAW","LIE","EVE","OLD","EVE","GIG","EVE","IRE"]
+#module_path=["LIE","TAU","FOG","LAW","EVE","OLD","LIE"]
+>>>>>>> b5d8a58a94f84537981fd0bb9f46b2664a783994
 
 #zeros the coordinate system on the xyz of the first node in the chain
 x0=segs[module_path[0]]["fx"]
