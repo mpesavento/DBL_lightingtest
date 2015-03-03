@@ -3,6 +3,8 @@
 import sys, os, math
 import csv
 
+
+#reads the node positions file and saves the xyz of each node/segment
 segs = {}
 count = 0
 sys.argv[1]="node_info.csv"
@@ -48,8 +50,10 @@ for line in open(sys.argv[1], "r").xreadlines():
 module_nodes=["ERA","RIB","IRE","FOG","LAW","GIG","EVE","TAU","OLD","LIE"]
 #full path
 #module_path=["LIE","TAU","FOG","RIB","ERA","IRE","GIG","LIE","OLD","TAU","LAW","OLD","FOG","LAW","RIB","IRE","LAW","ERA","GIG","LAW","LIE","EVE","OLD","EVE","GIG","EVE","IRE"]
+#test path
 module_path=["LIE","TAU","FOG","LAW","EVE","OLD","LIE"]
 
+#zeros the coordinate system on the xyz of the first node in the chain
 x0=segs[module_path[0]]["fx"]
 y0=segs[module_path[0]]["fy"]
 z0=segs[module_path[0]]["fz"]
@@ -66,6 +70,11 @@ minledz=0
 maxledx=0
 maxledy=0
 maxledz=0
+
+#1) the try-except checks the direction of the segment (sometimes they're listed DEF-ABC, sometimes ABC-DEF and I'm going by which way we have the LED strip set up)
+#2) for each segment, appends the xyz coordinates of each LED by jumping one LED distance in the direction of the segment and keeps track of the LED count in the index of the ledpositions array
+#3) Also records the start and end led indexes of each segment in segment_indexes
+#4) Note: It seems that the x coordinates are reversed according to what this looks like in Processing. Not making any code changes for now until we figure out why.
 for node in module_path[1:]: 
       end=node
       k = start+"-"+end
@@ -117,22 +126,27 @@ for node in module_path[1:]:
       start=end
       #ledpositions.append(node)
 
+#outputs the LED positions in xyz to a csv file
 with open("led_positions.csv","wb") as f:
    wrtr=csv.writer(f)
    for c,led in enumerate(ledpositions):
       wrtr.writerow([c]+led)
       print c,"-",led
 
+#outputs the segment start/end indexes of each LED to a csv file
 with open("segment_start_end_indexes.csv","wb") as f:
    wrtr=csv.writer(f)
    for segment in segment_indexes:
       wrtr.writerow([segment]+segment_indexes[segment])
 
+#prints each of the segment start/end LED indexes, just a sanity check
 for x in segment_indexes:
    print x,segment_indexes[x]      
 
+#just for reference
 print "min x,y,z:",minledx,minledy,minledz
 print "max x,y,z:",maxledx,maxledy,maxledz
+
 
 for k in fs.keys():
    #print k, segs[k]
