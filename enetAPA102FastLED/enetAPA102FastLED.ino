@@ -1,7 +1,7 @@
 //Ethernet to WS2811 bridge for max et
 
 
-#include "FastLED.h"
+#include <FastLED.h>
 #include <SPI.h>         // needed for Arduino versions later than 0018
 #include <Ethernet.h>
 #include <EthernetUdp.h>         // UDP library from: bjoern@cs.stanford.edu 12/30/2008
@@ -14,8 +14,15 @@
 
 #define UDP_TX_PACKET_MAX_SIZE 1400
 
-CRGB leds[NUM_LEDS];
+// we assume 60/m. comment this in if we're driving a 30/m strip
+#define HALF_DENSITY
 
+struct {
+  byte header[21];
+  CRGB leds[NUM_LEDS];
+} incoming;
+
+CRGB *leds = (CRGB*)&incoming.leds;
 
 // Enter a MAC address and IP address for your controller below.
 // The IP address will be dependent on your local network:
@@ -25,7 +32,7 @@ byte mac[] = {
   0xDE, 0xAF, 0xB4, 0x4F, 0xE4, 0xFA };
 //IPAddress ip(192, 168, 1, 77);
 
-IPAddress ip(10,4,2,5);
+IPAddress ip(10,4,2,10);
 
 unsigned int localPort = 6038;      // local port to listen on
 
@@ -77,9 +84,13 @@ void loop() {
   if(packetSize)
   {
  
-Udp.read( (char*)leds, NUM_LEDS * 3);
+Udp.read( (char*)&incoming, sizeof(incoming));
 //delay(1);
 //Serial.println("enetNeoPixel packet ");
+
+#ifdef HALF_DENSITY
+  //for (int i=0)
+#endif
    
   }
  
