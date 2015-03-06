@@ -24,17 +24,20 @@ ArrayList<Particle> particles;
 
 int NUM_CTRL = 5; //number of controllers we are using
 
-int[] ctrl_color = {color(100,0,0),
-                  color(0,100,0),
-                  color(0,0,100),
-                  color(100,100,0),
-                  color(100,0,100)
+float led_gain = 1; //0.5;
+
+int[] ctrl_color = {color(255*led_gain,0,0),
+                  color(0,255*led_gain,0),
+                  color(0,0,255*led_gain),
+                  color(255*led_gain,255*led_gain,0),
+                  color(255*led_gain,0,255*led_gain)
                 };
                 
 
 int TOTAL_NUMLED = 1483; //total number of LEDs on module
-
 int NUM_LED = 300; // max number of LEDs in each strand
+
+boolean MOUSE_ROTATE = boolean(0); // use the mouse to rotate the image, or not.
 
 // container of byte arrays for each controller
 ArrayList<byte[]> packet_list;
@@ -204,12 +207,15 @@ void setup() {
 
 void updateScreen() {
   Particle mp = findCentroid(particles);
-  //translate(mp.x, mp.y, mp.z); //centre centroid in screen
-  
-  //rotateCamera(particles); //use the mouse to rotate the camera
-  
-  translate(width/2-20, height/2-40, 550);
-  //rotateX(phi);
+  if (MOUSE_ROTATE) {
+    translate(mp.x, mp.y, mp.z); //centre centroid in screen
+    rotateCamera(particles); //use the mouse to rotate the camera
+  }
+  else {
+    translate(width/2-20, height/2+40, 500);
+    rotateY(PI/2);
+    //rotateX(phi);
+  }
   background(0);
   noFill();
     

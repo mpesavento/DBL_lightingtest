@@ -56,12 +56,23 @@ module_nodes=["ERA","RIB","IRE","FOG","LAW","GIG","EVE","TAU","OLD","LIE"]
 #000 indicates the end of a strip and the start of a new one - e.g. just start at the new one
 #module_path=["LIE","TAU","FOG","LAW","EVE","OLD","LIE"]
 module_paths=[["LIE","TAU","FOG","RIB","ERA","IRE","GIG","LIE","OLD","TAU","LAW","OLD","FOG","LAW","RIB","IRE","LAW","ERA","GIG","LAW","LIE","EVE","OLD"],["EVE","GIG","EVE","IRE"]]
+#module_paths=[['LIE', 'TAU', 'FOG', 'RIB', 'ERA', 'LAW'],
+#	 		['EVE', 'GIG', 'LIE', 'EVE', 'LAW', 'GIG'],
+#		  	['LAW', 'IRE', 'EVE', 'OLD', 'TAU', 'LAW'],
+#			['IRE', 'GIG', 'ERA', 'IRE', 'RIB', 'LAW'], 
+#			['OLD', 'LIE', 'LAW', 'OLD', 'FOG', 'LAW']]
+
 # module_paths=[["TAU","LAW","FOG","RIB","ERA","LAW","IRE"],
                 # ["OLD","EVE","LAW","OLD","LIE"],
                 # ["GIG","LIE","TAU","OLD","LIE"],
                 # ["LAW","LIE","EVE","GIG","IRE","ERA"],
                 # ["ERA","GIG","LAW","RIB","IRE","EVE"]]
-
+                
+module_paths=[["TAU","LAW","FOG","RIB","ERA","LAW","IRE"],
+            ["OLD","EVE","LAW","OLD","FOG","TAU"],
+            ["GIG","LIE","TAU","OLD","LIE"],
+            ["LAW","LIE","EVE","GIG","IRE","ERA"],
+            ["ERA","GIG","LAW","RIB","IRE","EVE"]]
 
 #zeros the coordinate system on the xyz of the first node in the chain
 x0=segs[module_paths[0][0]]["fx"]
@@ -122,7 +133,7 @@ for led_string,module_path in enumerate(module_paths):
                ledx=f["tx"]-divcount*led_distance*xd/distance-x0
                ledy=f["ty"]-divcount*led_distance*yd/distance-y0
                ledz=f["tz"]-divcount*led_distance*zd/distance-z0
-            ledpositions.append([ledx,ledy,ledz])
+            ledpositions.append([led_string,ledx,ledy,ledz])
             if ledx<minledx:
                minledx=ledx
             if ledy<minledy:
