@@ -1,0 +1,6 @@
+*** Uncertain strand (needs to be extended, prototyped over two missing bars
+1	Tau	Law	Fog	Rib	Era	Law	Ire
+2	Old	Eve	Law	Old	Fog	Tau
+3	Gig	Lie	Tau	Old	Lie
+4	Law	Lie	Eve	Gig	Ire	Era
+5	Era	Gig	Law	Rib	Ire	Eve
