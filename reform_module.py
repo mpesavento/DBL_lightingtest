@@ -53,27 +53,21 @@ for line in open(nodefile, "r").xreadlines():
 #sys.exit()
 
 module_nodes=["ERA","RIB","IRE","FOG","LAW","GIG","EVE","TAU","OLD","LIE"]
-#full path
-<<<<<<< HEAD
-#module_path=["LIE","TAU","FOG","RIB","ERA","IRE","GIG","LIE","OLD","TAU","LAW","OLD","FOG","LAW","RIB","IRE","LAW","ERA","GIG","LAW","LIE","EVE","OLD","EVE","GIG","EVE","IRE"]
-#test path
-module_path=["LIE","TAU","FOG","LAW","EVE","OLD","LIE"]
-=======
-module_path=["LIE","TAU","FOG","RIB","ERA","IRE","GIG","LIE","OLD","TAU","LAW","OLD","FOG","LAW","RIB","IRE","LAW","ERA","GIG","LAW","LIE","EVE","OLD","EVE","GIG","EVE","IRE"]
+#000 indicates the end of a strip and the start of a new one - e.g. just start at the new one
+module_paths=[["LIE","TAU","FOG","RIB","ERA","IRE","GIG","LIE","OLD","TAU","LAW","OLD","FOG","LAW","RIB","IRE","LAW","ERA","GIG","LAW","LIE","EVE","OLD"],["EVE","GIG","EVE","IRE"]]
 #module_path=["LIE","TAU","FOG","LAW","EVE","OLD","LIE"]
->>>>>>> b5d8a58a94f84537981fd0bb9f46b2664a783994
 
 #zeros the coordinate system on the xyz of the first node in the chain
-x0=segs[module_path[0]]["fx"]
-y0=segs[module_path[0]]["fy"]
-z0=segs[module_path[0]]["fz"]
+x0=segs[module_paths[0][0]]["fx"]
+y0=segs[module_paths[0][0]]["fy"]
+z0=segs[module_paths[0][0]]["fz"]
 
 segment_indexes={}
 leds=[]
 led_distance=0.656168 #60 leds per meter, in inches. Why in tarnation are we using inches?
-start=module_path[0]
 distance_covered=0
 ledpositions=[]
+string_start_indexes=[]
 minledx=0
 minledy=0
 minledz=0
@@ -85,56 +79,60 @@ maxledz=0
 #2) for each segment, appends the xyz coordinates of each LED by jumping one LED distance in the direction of the segment and keeps track of the LED count in the index of the ledpositions array
 #3) Also records the start and end led indexes of each segment in segment_indexes
 #4) Note: It seems that the x coordinates are reversed according to what this looks like in Processing. Not making any code changes for now until we figure out why.
-for node in module_path[1:]: 
-      end=node
-      k = start+"-"+end
-      k2=end+"-"+start
-      segment_index_reversed=False
-      try:
-         f = fs[k]
-         xd = f["tx"] - f["fx"]
-         yd = f["ty"] - f["fy"]
-         zd = f["tz"] - f["fz"]
-         right_direction=k
-      except KeyError:
-         f = fs[k2]
-         fs[k]=f
-         segment_index_reversed=True
-         xd = f["fx"] - f["tx"]
-         yd = f["fy"] - f["ty"]
-         zd = f["fz"] - f["tz"]
-         right_direction=k2
-      segment_indexes[right_direction]=[]
-      segment_indexes[right_direction].append(len(ledpositions)+1)
-      distance=math.sqrt(math.pow(xd,2)+math.pow(yd,2)+math.pow(zd,2))
-      distance_covered+=distance
-      divcount=0
-      while len(ledpositions)*led_distance<distance_covered:
-         if not segment_index_reversed:
-            ledx=f["fx"]+divcount*led_distance*xd/distance-x0
-            ledy=f["fy"]+divcount*led_distance*yd/distance-y0
-            ledz=f["fz"]+divcount*led_distance*zd/distance-z0
-         else:
-            ledx=f["tx"]-divcount*led_distance*xd/distance-x0
-            ledy=f["ty"]-divcount*led_distance*yd/distance-y0
-            ledz=f["tz"]-divcount*led_distance*zd/distance-z0
-         ledpositions.append([ledx,ledy,ledz])
-         if ledx<minledx:
-            minledx=ledx
-         if ledy<minledy:
-            minledy=ledy
-         if ledz<minledz:
-            minledz=ledz
-         if ledx>maxledx:
-            maxledx=ledx
-         if ledy>maxledy:
-            maxledy=ledy
-         if ledy>maxledz:
-            maxledz=ledz
-         divcount+=1
-      segment_indexes[right_direction].append(len(ledpositions))
-      start=end
-      #ledpositions.append(node)
+
+for led_string,module_path in enumerate(module_paths):
+   string_start_indexes.append([led_string,len(ledpositions)])
+   start=module_path[0]
+   for node in module_path[1:]: 
+         end=node
+         k = start+"-"+end
+         k2=end+"-"+start
+         segment_index_reversed=False
+         try:
+            f = fs[k]
+            xd = f["tx"] - f["fx"]
+            yd = f["ty"] - f["fy"]
+            zd = f["tz"] - f["fz"]
+            right_direction=k
+         except KeyError:
+            f = fs[k2]
+            fs[k]=f
+            segment_index_reversed=True
+            xd = f["fx"] - f["tx"]
+            yd = f["fy"] - f["ty"]
+            zd = f["fz"] - f["tz"]
+            right_direction=k2
+         segment_indexes[right_direction]=[]
+         segment_indexes[right_direction].append(len(ledpositions)+1)
+         distance=math.sqrt(math.pow(xd,2)+math.pow(yd,2)+math.pow(zd,2))
+         distance_covered+=distance
+         divcount=0
+         while len(ledpositions)*led_distance<distance_covered:
+            if not segment_index_reversed:
+               ledx=f["fx"]+divcount*led_distance*xd/distance-x0
+               ledy=f["fy"]+divcount*led_distance*yd/distance-y0
+               ledz=f["fz"]+divcount*led_distance*zd/distance-z0
+            else:
+               ledx=f["tx"]-divcount*led_distance*xd/distance-x0
+               ledy=f["ty"]-divcount*led_distance*yd/distance-y0
+               ledz=f["tz"]-divcount*led_distance*zd/distance-z0
+            ledpositions.append([ledx,ledy,ledz])
+            if ledx<minledx:
+               minledx=ledx
+            if ledy<minledy:
+               minledy=ledy
+            if ledz<minledz:
+               minledz=ledz
+            if ledx>maxledx:
+               maxledx=ledx
+            if ledy>maxledy:
+               maxledy=ledy
+            if ledy>maxledz:
+               maxledz=ledz
+            divcount+=1
+         segment_indexes[right_direction].append(len(ledpositions))
+         start=end
+         #ledpositions.append(node)
 
 #outputs the LED positions in xyz to a csv file
 with open("led_positions.csv","wb") as f:
@@ -142,6 +140,13 @@ with open("led_positions.csv","wb") as f:
    for c,led in enumerate(ledpositions):
       wrtr.writerow([c]+led)
       print c,"-",led
+
+
+#outputs the string start/end indexes of each LED to a csv file
+with open("LED_string_start_indexes.csv","wb") as f:
+   wrtr=csv.writer(f)
+   for segment in string_start_indexes:
+      wrtr.writerow(segment)
 
 #outputs the segment start/end indexes of each LED to a csv file
 with open("segment_start_end_indexes.csv","wb") as f:
