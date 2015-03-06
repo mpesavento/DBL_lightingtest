@@ -1,0 +1,1 @@
+5	496.998625553	[['LAW', 'OLD', 'TAU', 'LAW', 'LIE', 'OLD'], ['GIG', 'ERA', 'IRE', 'EVE', 'GIG', 'IRE'], ['LIE', 'TAU', 'FOG', 'RIB', 'IRE', 'LAW'], ['RIB', 'LAW', 'GIG', 'LIE', 'EVE', 'LAW'], ['EVE', 'OLD', 'FOG', 'LAW', 'ERA', 'RIB']]
