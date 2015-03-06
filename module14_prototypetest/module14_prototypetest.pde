@@ -24,11 +24,11 @@ ArrayList<Particle> particles;
 
 int NUM_CTRL = 5; //number of controllers we are using
 
-int[] ctrl_color = {color(255,0,0),
-                  color(0,255,0),
-                  color(0,0,255),
-                  color(255,255,0),
-                  color(255,0,255)
+int[] ctrl_color = {color(100,0,0),
+                  color(0,100,0),
+                  color(0,0,100),
+                  color(100,100,0),
+                  color(100,0,100)
                 };
                 
 
@@ -155,7 +155,8 @@ void oscEvent(OscMessage theOscMessage)
 
 
 void setup() {
-
+  size(1024,768, P3D);
+  
   println("opening UDP socket: " + str(UDP_PORT));
   udp = new UDP(this, UDP_PORT);
   udp.listen( true );
@@ -171,7 +172,7 @@ void setup() {
   }
 
   // create the particle animation
-  size(1024,768, P3D);
+
   lines = loadStrings("led_positions.csv");
   particles = new ArrayList<Particle>();
   for(int i = 0; i<lines.length; i++){    
@@ -203,10 +204,11 @@ void setup() {
 
 void updateScreen() {
   Particle mp = findCentroid(particles);
-  translate(mp.x, mp.y, mp.z); //centre centroid in screen
+  //translate(mp.x, mp.y, mp.z); //centre centroid in screen
   
-  rotateCamera(particles); //use the mouse to rotate the camera
+  //rotateCamera(particles); //use the mouse to rotate the camera
   
+  translate(width/2-20, height/2-40, 550);
   //rotateX(phi);
   background(0);
   noFill();

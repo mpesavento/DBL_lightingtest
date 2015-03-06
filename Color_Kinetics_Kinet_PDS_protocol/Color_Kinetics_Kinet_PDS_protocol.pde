@@ -10,6 +10,9 @@ byte[] packet = new byte[536];
 float volume; 
 float avgVol; 
 
+float led_gain = 0.25;
+int count =0;
+
 void setup() {
 
   udp = new UDP(this, 6038);
@@ -38,15 +41,17 @@ void setup() {
 void draw() {
   // set string port here:
   // packet[16] = 0x01
-  
+    count++;
+    
     for (int i = 0; i < 144; i++) {
 
-      packet[21+(i*3)+1] = byte(64);
-//        packet[21+(i*3)+1] = byte(255-i);
-//        packet[21+(i*3)+2] = byte(255-i*2);
+      packet[21+(i*3)+2] = byte(64);
+      //packet[21+(i*3)+2] = byte(int(255*led_gain));
+      //packet[21+(i*3)+1] = byte(255-i);
+      //packet[21+(i*3)+2] = byte(255-i*2);
     }
 
     delay(30); //some power supplies freak out if this is less than 30ms or so
-    udp.send(packet, "10.4.2.5");
+    udp.send(packet, "10.4.2.10");
 
 }
