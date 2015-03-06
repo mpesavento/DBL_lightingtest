@@ -7,7 +7,7 @@
 
 /**** globals ****************************/
 
-int ROTATION_TYPE = 1;
+int ROTATION_TYPE = 0;
 // 0 = no motion
 // 1 = wiggle around z
 // 2 = rotate clockwise around z
@@ -29,7 +29,7 @@ float theta = 0; //not used, for rotating along Z?
 /* this is waaaay more complicated than it needs to be! */
 float XSPIN_RATE = 0; // 0.008
 float ZSPIN_RATE = 0.01; // 0.008
-int WIGGLE_RATE = 200;
+int WIGGLE_RATE = 100;
 
 float spinx = 0; //object spin rate, X
 float spinz = ZSPIN_RATE;
@@ -107,7 +107,7 @@ void setModelRotate() {
 
 void setup() {
   size(1024,768, P3D);
-  lines = loadStrings("C:\\Users\\mpesavento\\src\\DBL_lightingtest\\led_positions.csv");
+  lines = loadStrings("led_positions.csv");
   particles = new ArrayList<Particle>();
   for(int i = 0; i<lines.length; i++){    
      float[] dims = float(split(lines[i], ','));
