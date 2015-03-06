@@ -202,8 +202,12 @@ void setup() {
 
 
 void updateScreen() {
-  translate(width/2-40, height/2, 500); //center LIE in screen
-  rotateX(phi);
+  Particle mp = findCentroid(particles);
+  translate(mp.x, mp.y, mp.z); //centre centroid in screen
+  
+  rotateCamera(particles); //use the mouse to rotate the camera
+  
+  //rotateX(phi);
   background(0);
   noFill();
     
