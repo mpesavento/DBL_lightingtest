@@ -1,22 +1,28 @@
 import hypermedia.net.*;
 import peasy.*;
+import oscP5.*;
+import netP5.*;
+
+OscP5 oscP5;
+NetAddress remoteOSCLocation;
 
 PeasyCam cam;
 UDP udp;
 
 int TOTAL_NUMLED = 1545; //total number of LEDs on module
 
-int NUM_LED = 300;
+int NUM_LED = 300; // max number of LEDs in each strand
+
+/* ideally I would make a object to iterate over each of these individual buffers, and then create
+a function that would map the full pixel string to each separate buffer, split at strandIx pixel index.
+*/
 // for now have separate buffers for each string
 byte[] packet0 = new byte[21 + NUM_LED*3];
 byte[] packet1 = new byte[21 + NUM_LED*3];
 byte[] packet2 = new byte[21 + NUM_LED*3];
+byte[] packet3 = new byte[21 + NUM_LED*3];
+byte[] packet4 = new byte[21 + NUM_LED*3];
 
-//AudioFile myInput; 
-//AudioStream myStream; 
-//FFT myFFT; 
-float volume; 
-float avgVol; 
 
 //always add final index for end of actual strand +1
 int[] strandIx = {0, 300, 600}; //these can be mutable, depending on how many pixels actually in string
@@ -25,7 +31,12 @@ int[] strandIx = {0, 300, 600}; //these can be mutable, depending on how many pi
 
 String lines[]; //reading in pixel index & XYZ from file
 
+// tried to use this for the center of the object, unclear if this works
+float[] coord_LAW = {-30.4079, 9.60728, 74.5791};
+
 float phi = PI/4; // starting angle for tilt along X; 0 is top down, PI/4 is 45 deg
+//float phi = 0;
+
 
 class Particle {
   int i; //linear index
@@ -103,6 +114,28 @@ void simpleWave(float rate, int cycles, int wait) {
 }  
 */
 
+// placeholder, use this to access Muse variables specifically
+void oscEvent(OscMessage theOscMessage) 
+{  
+  // get the first value as an integer
+  int firstValue = theOscMessage.get(0).intValue();
+ 
+  // get the second value as a float  
+  float secondValue = theOscMessage.get(1).floatValue();
+ 
+  // get the third value as a string
+  String thirdValue = theOscMessage.get(2).stringValue();
+ 
+  // print out the message
+  print("OSC Message Recieved: ");
+  print(theOscMessage.addrPattern() + " ");
+  println(firstValue + " " + secondValue + " " + thirdValue);
+}
+
+
+
+
+
 void setup() {
 
   udp = new UDP(this, 6038);
@@ -110,6 +143,9 @@ void setup() {
   buildPacketHeader(packet0);
   buildPacketHeader(packet1);
   buildPacketHeader(packet2);
+  
+  oscP5 = new OscP5(this, 5000); // read from muse port
+  remoteOSCLocation = new NetAddress("127.0.0.1", 5000);  
   
   // create the particle animation
   size(1024,768, P3D);
@@ -127,28 +163,33 @@ void setup() {
   TOTAL_NUMLED = particles.size();
   println("found " + TOTAL_NUMLED + " pixels");
   
-  //cam = new PeasyCam(this, 100);
-  //cam = new PeasyCam(this, 0,0,0, 1000);
+  //cam = new PeasyCam(this,0,0,0, 10);
+  //cam = new PeasyCam(this, 0,0,0, 10);
   //cam.setMinimumDistance(50);
   //cam.setMaximumDistance(500);
   //cam.setYawRotationMode();
 }
 
 void updateAnimation() {
+  translate(width/2-40, height/2, 500); //center LIE in screen
+  rotateX(phi);
   background(0);
   noFill();
-  strokeWeight(3);
     
 }
 
 
 void draw() {
-  translate(width/2-40, height/2, 500); //center LIE in screen
-  rotateX(phi);
-  //camera(mouseX, height/2, (height/2) / tan(PI/6), width/2, height/2, 0, 0, 1, 0);
-  //camera(mouseX*0.1, height/2, (height/2) / tan(PI/6), width/2, height/2, 0, 0, 1, 0);
   
   updateAnimation();
+  
+  //attempt to show origin and where LAW is
+  strokeWeight(10);
+  stroke(255,255,255);
+  //point(coord_LAW[0],coord_LAW[1],coord_LAW[2]); //this Z puts it way out of frame. how are we flattening the module?
+  point(-coord_LAW[0],-coord_LAW[1],0);
+  point(0,0,0);
+  
   
   int strandNum = 0;
   for (int i =0 ; i<TOTAL_NUMLED; i++) {
@@ -179,6 +220,7 @@ void draw() {
       c = color(random(255), random(255), random(255));
       //no strand to write packet to
     }
+    strokeWeight(3);
     stroke(c);
     point(p.x, p.y, p.z);
   }
