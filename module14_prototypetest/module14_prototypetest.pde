@@ -26,7 +26,7 @@ ArrayList<Particle> particles;
 
 int NUM_CTRL = 5; //number of controllers we are using
 
-float master_gain = 0.75; //0.5;
+float master_gain = 0.25; //0.5;
 
 color white = color(255,255,0);
 
@@ -41,7 +41,7 @@ int[] ctrl_color = {color(255,0,0),
 int TOTAL_NUMLED = 1483; //total number of LEDs on module
 int NUM_LED = 300; // max number of LEDs in each strand
 
-boolean MOUSE_ROTATE = boolean(0); // use the mouse to rotate the image, or not.
+boolean MOUSE_ROTATE = boolean(1); // use the mouse to rotate the image, or not.
 
 // container of byte arrays for each controller
 ArrayList<byte[]> packet_list;
@@ -116,19 +116,15 @@ void updatePackets() {
   for (int ii=0; ii< particles.size(); ii++) {
     Particle cp = particles.get(ii);
     if (cp.strand != curstrand) {
-      //println("offset changed: " + str(offset) + " to " + str(cp.offset));
-      //offset = cp.offset;
+      //println("strand changed: " + str(curstrand) + " to " + str(cp.curstrand));
+      curstrand = cp.strand;
       packet = packet_list.get(cp.strand); //update to next packet
     }
       
-    
     packet = packet_list.get(cp.strand); //update to next packet
     packet[21+cp.offset*3 +0] = byte(int(cp.r*master_gain) & 0xFF); // R 
     packet[21+cp.offset*3 +1] = byte(int(cp.g*master_gain) & 0xFF); // G
     packet[21+cp.offset*3 +2] = byte(int(cp.b*master_gain) & 0xFF); // B   
-    //packet[21-offset*3 +(ii*3)+0] = byte(cp.r & 0xFF); // R 
-    //packet[21-offset*3 +(ii*3)+1] = byte(cp.g & 0xFF); // G
-    //packet[21-offset*3 +(ii*3)+2] = byte(cp.b & 0xFF); // B   
 
   }   
     
@@ -156,8 +152,35 @@ void oscEvent(OscMessage theOscMessage)
 
 
 
+void updateScreen() {
+  Particle mp = findCentroid(particles);
+  if (MOUSE_ROTATE) {
+    rotateCamera(particles, int(MOUSE_ROTATE)); //use the mouse to rotate the camera
+  }
+  else {
+    translate(width/2-30, height/2-20, 530);
+    //rotateY(PI/2);
+    rotateZ(-PI/6);
+    //rotateX(phi);
+  }
+  background(0);
+  noFill();
+  
+  // print framerate
+  textSize(6);
+  fill(255,255,255);
+  text("fps=" + str(int(frameRate)), -100, 125);
+  //println(str(frameRate));
+    
+}
+
+
+//****************************************************************************
+//  setup() and draw()
+
 void setup() {
   size(1024,768, P3D);
+  textMode(SHAPE);
   
   println("opening UDP socket: " + str(UDP_PORT));
   udp = new UDP(this, UDP_PORT);
@@ -231,28 +254,10 @@ void setup() {
   // set each strip to its own color
   loadPixelColorByStrip();
   
-  initPatterns(particles, "TestColors.jpg");
+  initPatterns(particles, "TestColors2.jpg");
   //initPatterns(particles, "vertical.png");
 }
 
-
-
-void updateScreen() {
-  Particle mp = findCentroid(particles);
-  if (MOUSE_ROTATE) {
-    translate(mp.x, mp.y, mp.z); //centre centroid in screen
-    rotateCamera(particles); //use the mouse to rotate the camera
-  }
-  else {
-    translate(width/2-30, height/2+20, 530);
-    //rotateY(PI/2);
-    rotateZ(-PI/4);
-    //rotateX(phi);
-  }
-  background(0);
-  noFill();
-    
-}
 
 
 void draw() {
@@ -261,10 +266,8 @@ void draw() {
   updateScreen();
   
   //attempt to show origin and where LAW is
-  strokeWeight(  10);
+  strokeWeight(10);
   stroke(255,255,255);
-  //point(coord_LAW[0],coord_LAW[1],coord_LAW[2]); //this Z puts it way out of frame. how are we flattening the module?
-  //point(-coord_LAW[0],-coord_LAW[1],0);
   point(0,0,0);
   
   
@@ -298,6 +301,12 @@ void draw() {
   udp.send(packet_list.get(4), "10.4.2.14"); // 1200-1500
 }
 
+
+
+
+
+//***********************************************************
+// teh maths
 
 
 // mimic FastLEDs saturating math functions

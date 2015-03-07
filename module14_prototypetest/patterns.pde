@@ -1,21 +1,7 @@
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.awt.image.DataBufferByte;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import javax.imageio.ImageIO;
-import java.awt.Color;
-import java.util.Scanner;
-import java.util.Map;
-import java.lang.Math;
-import java.util.List;
-import java.util.Arrays;
-import java.util.ArrayList;
-import java.util.HashMap; 
-import java.util.Arrays;
-import java.lang.Double;
+/**
+* library containing classes and methods for creating patterns
+*
+*/
 
 //yay globals
 //declare globally, crash locally
@@ -118,7 +104,7 @@ void slideTheImage(ArrayList<Particle> particles){
 
 static int[] scaleLocationInImageToLocationInModule(double[] imagedims, double[] ledxy, double[][] minmaxxyz) {
       
-      println("START");
+      println("Scaling image to Module");
       println(ledxy[0]);
       println(minmaxxyz[0][0]);
       println(minmaxxyz[0][1]);

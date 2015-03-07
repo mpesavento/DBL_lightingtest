@@ -24,7 +24,7 @@ void mouseReleased() {
 //  println("tx ", tx, "ty ", ty);
 }
 
-void rotateCamera(ArrayList<Particle> particlesToCentreOn) {
+void rotateCamera(ArrayList<Particle> particlesToCentreOn, int use_mouse) {
   // look through this for more!
   // https://processing.org/tutorials/p3d/
 
