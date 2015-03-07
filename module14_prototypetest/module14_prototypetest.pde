@@ -48,6 +48,7 @@ ArrayList<byte[]> packet_list;
 
 String lines[]; //reading in pixel index & XYZ from file
 
+int loop_counter = 0; //count iterations on loop
 
 float phi = PI/4; // starting angle for tilt along X; 0 is top down, PI/4 is 45 deg
 //float phi = 0;
@@ -109,13 +110,13 @@ void loadPixelColorByStrip() {
 * copy the colors from the Particles array ointo the packet buffers
 */
 void updatePackets() {
-  int offset = -1;
+  int curstrand=0;
   byte[] packet = packet_list.get(0);
   for (int ii=0; ii< particles.size(); ii++) {
     Particle cp = particles.get(ii);
-    if (cp.offset != offset) {
-      println("offset changed: " + str(offset) + " to " + str(cp.offset));
-      offset = cp.offset;
+    if (cp.strand != curstrand) {
+      //println("offset changed: " + str(offset) + " to " + str(cp.offset));
+      //offset = cp.offset;
       packet = packet_list.get(cp.strand); //update to next packet
     }
       
@@ -201,8 +202,10 @@ void setup() {
   TOTAL_NUMLED = particles.size();
   println("found " + TOTAL_NUMLED + " pixels");
   
-  // set each strip to it's own color
+  // set each strip to its own color
   loadPixelColorByStrip();
+  
+  initPatterns(particles);
 
 }
 
@@ -227,16 +230,27 @@ void updateScreen() {
 
 
 void draw() {
-  
+  loop_counter++;
+  //println("t= " + str(loop_counter));
   updateScreen();
   
   //attempt to show origin and where LAW is
-  strokeWeight(10);
+  strokeWeight(  10);
   stroke(255,255,255);
   //point(coord_LAW[0],coord_LAW[1],coord_LAW[2]); //this Z puts it way out of frame. how are we flattening the module?
   //point(-coord_LAW[0],-coord_LAW[1],0);
   point(0,0,0);
   
+  
+  //PATTERN: image cycling code: just uncomment this line
+  //slideTheImage(particles);
+
+  //PATTERN: Radial spheres: Uncomment this block
+  //radial3dspheres(particles, 0.02);
+
+  //PATTERN: loop over hue values
+  loopHSV(particles);
+
   //byte[] extractedData = (byte[])packet_list[0];
   
   updatePackets();
@@ -250,7 +264,7 @@ void draw() {
   }
   
   
-  delay(30); //some power supplies freak out if this is less than 30ms or so
+  //delay(5); //some power supplies freak out if this is less than 30ms or so
   udp.send(packet_list.get(0), "10.4.2.11"); // 0-299
   udp.send(packet_list.get(1), "10.4.2.15"); // 300-599
   udp.send(packet_list.get(2), "10.4.2.12"); // 600-899

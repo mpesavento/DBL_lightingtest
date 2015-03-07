@@ -9,7 +9,7 @@
 #define DATA_PIN 3
 #define CLOCK_PIN 2
 
-#define COLOR_ORDER GBR
+#define COLOR_ORDER BGR //GBR on #15, BGR for all else?
 #define CHIPSET     APA102
 
 #define UDP_TX_PACKET_MAX_SIZE 1400
@@ -20,7 +20,10 @@
 struct {
   byte header[21];
   CRGB leds[NUM_LEDS];
-} incoming;
+} incoming;    //packet[21-offset*3 +(ii*3)+0] = byte(cp.r & 0xFF); // R 
+    //packet[21-offset*3 +(ii*3)+1] = byte(cp.g & 0xFF); // G
+    //packet[21-offset*3 +(ii*3)+2] = byte(cp.b & 0xFF); // B   
+
 
 CRGB *leds = (CRGB*)&incoming.leds;
 
@@ -29,10 +32,10 @@ CRGB *leds = (CRGB*)&incoming.leds;
 //byte mac[] = {  
 //  0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 byte mac[] = {  
-  0xDE, 0xAF, 0xB4, 0x4F, 0xE4, 0x16 };
+  0xDE, 0xAF, 0xB4, 0x4F, 0xE4, 0x15 };
 //IPAddress ip(192, 168, 1, 77);
 
-IPAddress ip(10,4,2,16);
+IPAddress ip(10,4,2,15);
 
 unsigned int localPort = 6038;      // local port to listen on
 
@@ -63,8 +66,8 @@ void setup() {
   
   FastLED.addLeds<CHIPSET, DATA_PIN,CLOCK_PIN, COLOR_ORDER>(leds, NUM_LEDS);
    for(int i = 0; i < NUM_LEDS; i++) {
-		// Set the i'th led to red 
-		leds[i] = CRGB::Blue;
+		// Set the i'th led to yellow: this will teset byte order as well 
+		leds[i] = CRGB::Yellow;
 		// Show the leds
 		FastLED.show();
 		// now that we've shown the leds, reset the i'th led to black
