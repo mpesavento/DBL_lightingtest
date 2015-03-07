@@ -13,6 +13,7 @@ int UDP_PORT = 6038;
 
 class Particle {
   int i; //linear index
+  int strand;
   float x,y,z;
   int r,g,b;
 }
@@ -98,10 +99,8 @@ void loadPixelColorByStrip() {
   int b=0;
   int curcolor=0;
   for (int ii=0; ii< particles.size(); ii++) {
-    if ( strandix != strand_start_ix.length-1 && ii==strand_start_ix[strandix+1]) {
-      strandix++;
-    }
     Particle cp = particles.get(ii);
+    strandix = cp.strand;
     curcolor = ctrl_color[strandix];
     
     cp.r = int(curcolor >> 16 & 0xFF);
@@ -182,9 +181,10 @@ void setup() {
      float[] dims = float(split(lines[i], ','));
      Particle p = new Particle();
      p.i = int(dims[0]);
-     p.x = -dims[1]; //flipping the sign on this because the orientation of the original node list is likely inccorrect in X
-     p.y = dims[2];
-     p.z = dims[3];
+     p.strand = int(dims[1]);
+     p.x = -dims[2]; //flipping the sign on this because the orientation of the original node list is likely inccorrect in X
+     p.y = dims[3];
+     p.z = dims[4];
      p.r = 0;
      p.g = 0;
      p.b = 255;
@@ -212,8 +212,9 @@ void updateScreen() {
     rotateCamera(particles); //use the mouse to rotate the camera
   }
   else {
-    translate(width/2-20, height/2+40, 500);
-    rotateY(PI/2);
+    translate(width/2-30, height/2+20, 530);
+    //rotateY(PI/2);
+    rotateZ(-PI/2);
     //rotateX(phi);
   }
   background(0);
@@ -247,8 +248,8 @@ void draw() {
   
   
   delay(30); //some power supplies freak out if this is less than 30ms or so
-  udp.send(packet_list.get(0), "10.4.2.10"); // 0-299
-  udp.send(packet_list.get(1), "10.4.2.11"); // 300-599
+  udp.send(packet_list.get(0), "10.4.2.11"); // 0-299
+  udp.send(packet_list.get(1), "10.4.2.10"); // 300-599
   udp.send(packet_list.get(2), "10.4.2.13"); // 600-899
   udp.send(packet_list.get(3), "10.4.2.14"); // 900-1199
   udp.send(packet_list.get(4), "10.4.2.15"); // 1200-1500
