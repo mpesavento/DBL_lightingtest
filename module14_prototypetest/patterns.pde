@@ -19,13 +19,6 @@ import java.lang.Double;
 
 //yay globals
 //declare globally, crash locally
-double min_x = -65.5689;
-double max_x = 24.8563;
-double min_y = 0.0;
-double max_y = 70.4039;
-double min_z = 0.0;
-double max_z = 22.07653;
-double[][] minmaxxyz = new double[][] {{min_x,max_x},{min_y,max_y},{min_z,max_z}};
 
 color[][] theimage;
 color[][] theduplicat;

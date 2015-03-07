@@ -184,6 +184,12 @@ void setup() {
      Particle p = new Particle();
      p.i = int(dims[0]);
      p.strand = int(dims[1]);
+     double min_x=0.0;
+     double max_x=0.0;
+     double min_y=0.0;
+     double max_y=0.0;
+     double min_z=0.0;
+     double max_z=0.0;
      if (p.strand != cur_strand) {
        println("strand " + str(p.strand) + " offset: " + str(i));
        cur_strand = p.strand;
@@ -199,7 +205,26 @@ void setup() {
      p.g = 0;
      p.b = 255;
      particles.add(p);
+     if (p.x>max_x){
+       max_x=p.x;
+     }         
+     if (p.x<min_x){
+       inx_x=p.x;
+     }
+     if (p.y>max_y){
+       max_y=p.y;
+     }         
+     if (p.y<min_y){
+       inx_y=p.y;
+     }
+     if (p.z>max_z){
+       max_z=p.z;
+     }         
+     if (p.z<min_z){
+       inx_z=p.z;
+     }
   }
+  minmaxxyz = new double[3][2]{{min_x,max_x},{min_y,max_y},{min_z,max_z}};
   TOTAL_NUMLED = particles.size();
   println("found " + TOTAL_NUMLED + " pixels");
   
