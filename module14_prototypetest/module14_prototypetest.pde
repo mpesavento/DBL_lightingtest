@@ -26,14 +26,15 @@ ArrayList<Particle> particles;
 
 int NUM_CTRL = 5; //number of controllers we are using
 
-float led_gain = 0.75; //0.5;
-color white = color(255*led_gain,255*led_gain,0);
+float master_gain = 0.75; //0.5;
 
-int[] ctrl_color = {color(255*led_gain,0,0),
-                  color(0,255*led_gain,0),
-                  color(0,0,255*led_gain),
-                  color(255*led_gain,255*led_gain,0),
-                  color(255*led_gain,0,255*led_gain)
+color white = color(255,255,0);
+
+int[] ctrl_color = {color(255,0,0),
+                  color(0,255,0),
+                  color(0,0,255),
+                  color(255,255,0),
+                  color(255,0,255)
                 };
                 
 
@@ -122,9 +123,9 @@ void updatePackets() {
       
     
     packet = packet_list.get(cp.strand); //update to next packet
-    packet[21+cp.offset*3 +0] = byte(cp.r & 0xFF); // R 
-    packet[21+cp.offset*3 +1] = byte(cp.g & 0xFF); // G
-    packet[21+cp.offset*3 +2] = byte(cp.b & 0xFF); // B   
+    packet[21+cp.offset*3 +0] = byte(int(cp.r*master_gain) & 0xFF); // R 
+    packet[21+cp.offset*3 +1] = byte(int(cp.g*master_gain) & 0xFF); // G
+    packet[21+cp.offset*3 +2] = byte(int(cp.b*master_gain) & 0xFF); // B   
     //packet[21-offset*3 +(ii*3)+0] = byte(cp.r & 0xFF); // R 
     //packet[21-offset*3 +(ii*3)+1] = byte(cp.g & 0xFF); // G
     //packet[21-offset*3 +(ii*3)+2] = byte(cp.b & 0xFF); // B   
@@ -205,8 +206,8 @@ void setup() {
   // set each strip to its own color
   loadPixelColorByStrip();
   
-  initPatterns(particles);
-
+  initPatterns(particles, "TestColors.jpg");
+  //initPatterns(particles, "vertical.png");
 }
 
 
@@ -220,7 +221,7 @@ void updateScreen() {
   else {
     translate(width/2-30, height/2+20, 530);
     //rotateY(PI/2);
-    rotateZ(-PI/2);
+    rotateZ(-PI/4);
     //rotateX(phi);
   }
   background(0);
@@ -243,15 +244,15 @@ void draw() {
   
   
   //PATTERN: image cycling code: just uncomment this line
-  //slideTheImage(particles);
+  slideTheImage(particles);
 
   //PATTERN: Radial spheres: Uncomment this block
   //radial3dspheres(particles, 0.02);
 
   //PATTERN: loop over hue values
-  loopHSV(particles);
+  //loopHSV(particles);
 
-  //byte[] extractedData = (byte[])packet_list[0];
+  
   
   updatePackets();
 

@@ -180,9 +180,9 @@ static int[] scaleLocationIn3dspaceToLocationInModule(double[] imagedims, double
       return result;     
    }
 
-void initPatterns(ArrayList<Particle> particles) {
+void initPatterns(ArrayList<Particle> particles, String filename) {
     //image stuff
-    culurz = loadImage("TestColors.jpg");
+    culurz = loadImage(filename);
     loadPixels();  
     culurz.loadPixels();
     widf=(int)culurz.width;
