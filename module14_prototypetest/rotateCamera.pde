@@ -1,3 +1,28 @@
+float tx = 0;  //current rotation
+float ty = 0; 
+float tz = 0;
+float mx0 = 0; //mouse coords in window
+float my0 = 0;
+float tx0 = 0; //rotation at start of click 
+float ty0 = 0; 
+float scaleFactor0 = 2.0;  //controls position of camera away from object
+float scaleFactor=2.0;
+
+void mousePressed() {
+  mx0 = mouseX; //mouse coords in window
+  my0 = mouseY;
+  tx0 = tx;
+  ty0 = ty;
+  scaleFactor0 = scaleFactor;
+//  println("tx0 ", tx, "ty0 ", ty);
+  
+}
+
+void mouseReleased() {
+//  tx = tx0;
+//  ty = ty0;
+//  println("tx ", tx, "ty ", ty);
+}
 
 void rotateCamera(ArrayList<Particle> particlesToCentreOn) {
   // look through this for more!
@@ -12,21 +37,39 @@ void rotateCamera(ArrayList<Particle> particlesToCentreOn) {
   float zoom = 0.1;//2.0*mouseY/height;
 
   float x, y, z, mx, my, ox, oy, oz, vx, vy, vz, oox, ooy, ooz;
-  float tx, ty, tz; //theta x,y,z - rotation of camera around each axis away from default position
-  mx = mouseX; //mouse coords in window
-  my = mouseY;
+  //float tx, ty, tz; //theta x,y,z - rotation of camera around each axis away from default position
+  
+  
+  //set camera pos based on centre of mass of object, and use mouse to rotate
+  Particle meanParticle = findCentroid(particlesToCentreOn);
+  float scale = findScale(particlesToCentreOn);
+  //zoom = scale/(height/2);
+  
   oox = width/2; //origin x of centre of window
   ooy = height/2; //origin y of centre of window
   ooz = 0; //origin z of centre of window
-
+  mx = oox + mouseX-mx0; //mouse coords in window
+  my = ooy + mouseY-my0;
+  
+  
+  if( (mousePressed && (mouseButton == LEFT)))
+  {
+    ty = ty0 + PI/2*(mx-oox)/oox; //map x mouse position to +-pi
+    tx = tx0 + PI/2*(my-ooy)/ooy; //map y mouse position to +-pi
+    //println("tx ", tx, "ty ", ty);
+  }
+  if( (mousePressed && (mouseButton == RIGHT)))
+  {
+    scaleFactor =  scaleFactor0 + (my-ooy)/ooy;
+  }
+  scale = scale* scaleFactor;
+//  println("my ", (my-ooy)/ooy, "  scale", scale, "  scaleFactor0", scaleFactor0, "  scaleFactor", scaleFactor);
+  
+  
   vx = width/2; //default camera positon x
   vy = height/2; //default camera positon y
   vz = (height/2)/ tan(fov/2); //default camera positon z
 
-  //set camera pos based on centre of mass of object, and use mouse to rotate
-  Particle meanParticle = findCentroid(particlesToCentreOn);
-  float scale = findScale(particlesToCentreOn)*2;
-  //zoom = scale/(height/2);
   ox = meanParticle.x; //origin x of centre of model
   oy = meanParticle.y; //origin y of centre of model
   oz = meanParticle.z; //origin z of centre of model
@@ -35,8 +78,6 @@ void rotateCamera(ArrayList<Particle> particlesToCentreOn) {
   vy = oy; //default camera positon y
   vz = oz + (scale/2)/ tan(fov/2); //default camera positon z
 
-  ty = PI/2*(mx-oox)/oox; //map x mouse position to +-pi
-  tx = PI/2*(my-ooy)/ooy; //map y mouse position to +-pi
 
   x = vx;
   y = vy;
@@ -71,7 +112,7 @@ void rotateCamera(ArrayList<Particle> particlesToCentreOn) {
   z=z1;
 
   //println("theta y=",nf(ty*180/PI,3,2),   "theta x=",nf(tx*180/PI,3,2), "\t",    "x",nf(x,3,2) ,"y", nf(y,3,2),"z", nf(z,3,2));
-  println(Rmat[0], Rmat[1], Rmat[2], "\n", Rmat[3], Rmat[4], Rmat[5],  "\n", Rmat[6], Rmat[7], Rmat[8],  "\n");
+  //println(Rmat[0], Rmat[1], Rmat[2], "\n", Rmat[3], Rmat[4], Rmat[5],  "\n", Rmat[6], Rmat[7], Rmat[8],  "\n");
 
   //camera "up" vector - rotate around same axis
   float nx = 0;
