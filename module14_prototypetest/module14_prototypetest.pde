@@ -54,7 +54,7 @@ int loop_counter = 0; //count iterations on loop
 float phi = PI/4; // starting angle for tilt along X; 0 is top down, PI/4 is 45 deg
 //float phi = 0;
 
-
+double[][] minmaxxyz = new double[3][2];
 
 
 /* 
@@ -179,17 +179,17 @@ void setup() {
   particles = new ArrayList<Particle>();
   int cur_strand = -1;
   int cur_offset = 0;
+  double min_x=0.0;
+  double max_x=0.0;
+  double min_y=0.0;
+  double max_y=0.0;
+  double min_z=0.0;
+  double max_z=0.0;
   for(int i = 0; i<lines.length; i++){    
      float[] dims = float(split(lines[i], ','));
      Particle p = new Particle();
      p.i = int(dims[0]);
      p.strand = int(dims[1]);
-     double min_x=0.0;
-     double max_x=0.0;
-     double min_y=0.0;
-     double max_y=0.0;
-     double min_z=0.0;
-     double max_z=0.0;
      if (p.strand != cur_strand) {
        println("strand " + str(p.strand) + " offset: " + str(i));
        cur_strand = p.strand;
@@ -209,22 +209,22 @@ void setup() {
        max_x=p.x;
      }         
      if (p.x<min_x){
-       inx_x=p.x;
+       min_x=p.x;
      }
      if (p.y>max_y){
        max_y=p.y;
      }         
      if (p.y<min_y){
-       inx_y=p.y;
+       min_y=p.y;
      }
      if (p.z>max_z){
        max_z=p.z;
      }         
      if (p.z<min_z){
-       inx_z=p.z;
+       min_z=p.z;
      }
   }
-  minmaxxyz = new double[3][2]{{min_x,max_x},{min_y,max_y},{min_z,max_z}};
+  minmaxxyz = new double[][]{{min_x,max_x},{min_y,max_y},{min_z,max_z}};
   TOTAL_NUMLED = particles.size();
   println("found " + TOTAL_NUMLED + " pixels");
   
@@ -269,10 +269,10 @@ void draw() {
   
   
   //PATTERN: image cycling code: just uncomment this line
-  slideTheImage(particles);
+  //slideTheImage(particles);
 
   //PATTERN: Radial spheres: Uncomment this block
-  //radial3dspheres(particles, 0.02);
+  radial3dspheres(particles, 0.02);
 
   //PATTERN: loop over hue values
   //loopHSV(particles);

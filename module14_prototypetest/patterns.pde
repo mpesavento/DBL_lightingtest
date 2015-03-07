@@ -55,6 +55,10 @@ static double distanceBetweenPoints(double[] point1, double[] point2){
   return Math.sqrt(Math.pow((point1[0]-point2[0]),2)+Math.pow((point1[1]-point2[1]),2)+Math.pow((point1[2]-point2[2]),2));
 }
 
+static double angleFromOriginXY(double[] origin, double[]point){
+  return Math.atan((point[0]-origin[0])/point[1]-origin[1]);
+}
+
 void radial3dspheres(ArrayList<Particle> particles, double speed){
   frame=frame+speed %1.0;
   double centroidx=minmaxxyz[0][0]+(minmaxxyz[0][1]-minmaxxyz[0][0])/2.0;
@@ -70,11 +74,13 @@ void radial3dspheres(ArrayList<Particle> particles, double speed){
          double z=pradial.z;
          double[] ledxyz = new double[] {x,y,z};
          double radialRatio=distanceBetweenPoints(ledxyz,centroid)/maxdistance;
-         double level = Math.sin(2.0*Math.PI*(radialRatio+(1-frame))) * 127 + 128;
-         int dat_culla=(int)level;
-         pradial.r = (dat_culla >> 16) & 0xFF;
-         pradial.g = (dat_culla >> 8) & 0xFF;
-         pradial.b = dat_culla & 0xFF;
+         double angle=angleFromOriginXY(centroid, ledxyz);
+         double pred = Math.sin(2.0*Math.PI*(radialRatio+(1-frame))) * 255;
+         double pblue = Math.sin(2.0*Math.PI*(radialRatio+(1-frame)*0.333333)) * 255;
+         double pgreen = Math.sin(2.0*Math.PI*(radialRatio+(1-frame)*0.666667)) * 255;
+         pradial.r = (int)pred;
+         pradial.g = (int)pblue;
+         pradial.b = (int)pgreen;
          particles.set(row,pradial);
   }
 }
