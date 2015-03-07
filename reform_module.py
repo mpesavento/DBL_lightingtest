@@ -68,12 +68,17 @@ module_paths=[["LIE","TAU","FOG","RIB","ERA","IRE","GIG","LIE","OLD","TAU","LAW"
                 # ["LAW","LIE","EVE","GIG","IRE","ERA"],
                 # ["ERA","GIG","LAW","RIB","IRE","EVE"]]
                 
+# module_paths=[["TAU","LAW","FOG","RIB","ERA","LAW","IRE"],
+            # ["OLD","EVE","LAW","OLD","FOG","TAU"], # this one is backwards too
+            # ["GIG","LIE","TAU","OLD","LIE"], # this line is backwards
+            # ["LAW","LIE","EVE","GIG","IRE","ERA"],
+            # ["ERA","GIG","LAW","RIB","IRE","EVE"]]
 module_paths=[["TAU","LAW","FOG","RIB","ERA","LAW","IRE"],
-            ["OLD","EVE","LAW","OLD","FOG","TAU"],
-            ["GIG","LIE","TAU","OLD","LIE"],
+            ["TAU","FOG","OLD","LAW","EVE","OLD"],
+            ["LIE","OLD","TAU","LIE","GIG"],
             ["LAW","LIE","EVE","GIG","IRE","ERA"],
             ["ERA","GIG","LAW","RIB","IRE","EVE"]]
-
+            
 #zeros the coordinate system on the xyz of the first node in the chain
 x0=segs[module_paths[0][0]]["fx"]
 y0=segs[module_paths[0][0]]["fy"]

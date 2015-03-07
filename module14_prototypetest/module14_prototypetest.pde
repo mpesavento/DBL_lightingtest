@@ -6,14 +6,15 @@ import netP5.*;
 OscP5 oscP5;
 NetAddress remoteOSCLocation;
 
-PeasyCam cam;
+
 UDP udp;
 int UDP_PORT = 6038;
 
 
 class Particle {
-  int i; //linear index
+  int i; //linear (global) index
   int strand;
+  int offset; // from start of strand
   float x,y,z;
   int r,g,b;
 }
@@ -25,7 +26,8 @@ ArrayList<Particle> particles;
 
 int NUM_CTRL = 5; //number of controllers we are using
 
-float led_gain = 1; //0.5;
+float led_gain = 0.75; //0.5;
+color white = color(255*led_gain,255*led_gain,0);
 
 int[] ctrl_color = {color(255*led_gain,0,0),
                   color(0,255*led_gain,0),
@@ -44,17 +46,8 @@ boolean MOUSE_ROTATE = boolean(0); // use the mouse to rotate the image, or not.
 ArrayList<byte[]> packet_list;
 
 
-
-//always add final index for end of actual strand +1
-//int[] strand_start_ix = {0, 300, 600}; //these can be mutable, depending on how many pixels actually in string
-//int[] strand_start_ix = {0, 300, 600, 900}; //these can be mutable, depending on how many pixels actually in string
-int[] strand_start_ix = {0, 300, 600, 900, 1200, 1500}; //these can be mutable, depending on how many pixels actually in string
-
-
 String lines[]; //reading in pixel index & XYZ from file
 
-// tried to use this for the center of the object, unclear if this works
-float[] coord_LAW = {-30.4079, 9.60728, 74.5791};
 
 float phi = PI/4; // starting angle for tilt along X; 0 is top down, PI/4 is 45 deg
 //float phi = 0;
@@ -116,20 +109,25 @@ void loadPixelColorByStrip() {
 * copy the colors from the Particles array ointo the packet buffers
 */
 void updatePackets() {
-  int strandix = 0;
-  int offset = strand_start_ix[strandix];
-  byte[] packet = packet_list.get(strandix);
+  int offset = -1;
+  byte[] packet = packet_list.get(0);
   for (int ii=0; ii< particles.size(); ii++) {
-    if ( strandix != strand_start_ix.length-1 && ii==strand_start_ix[strandix+1]) {
-      strandix++;
-      offset = strand_start_ix[strandix];
-      packet = packet_list.get(strandix); //update to next packet
-    }
-    
     Particle cp = particles.get(ii);
-    packet[21-offset*3 +(ii*3)+0] = byte(cp.r & 0xFF); // R 
-    packet[21-offset*3 +(ii*3)+1] = byte(cp.g & 0xFF); // G
-    packet[21-offset*3 +(ii*3)+2] = byte(cp.b & 0xFF); // B   
+    if (cp.offset != offset) {
+      println("offset changed: " + str(offset) + " to " + str(cp.offset));
+      offset = cp.offset;
+      packet = packet_list.get(cp.strand); //update to next packet
+    }
+      
+    
+    packet = packet_list.get(cp.strand); //update to next packet
+    packet[21+cp.offset*3 +0] = byte(cp.r & 0xFF); // R 
+    packet[21+cp.offset*3 +1] = byte(cp.g & 0xFF); // G
+    packet[21+cp.offset*3 +2] = byte(cp.b & 0xFF); // B   
+    //packet[21-offset*3 +(ii*3)+0] = byte(cp.r & 0xFF); // R 
+    //packet[21-offset*3 +(ii*3)+1] = byte(cp.g & 0xFF); // G
+    //packet[21-offset*3 +(ii*3)+2] = byte(cp.b & 0xFF); // B   
+
   }   
     
 }
@@ -168,7 +166,7 @@ void setup() {
   
   packet_list = new ArrayList<byte[]>();
   for( int i=0; i<NUM_CTRL; i++) {
-    byte[] packet = new byte[21 + NUM_LED*3];
+    byte[] packet = new byte[21 + NUM_LED*3 + 200];
     buildPacketHeader(packet);
     packet_list.add(packet);
   }
@@ -177,11 +175,21 @@ void setup() {
 
   lines = loadStrings("led_positions.csv");
   particles = new ArrayList<Particle>();
+  int cur_strand = -1;
+  int cur_offset = 0;
   for(int i = 0; i<lines.length; i++){    
      float[] dims = float(split(lines[i], ','));
      Particle p = new Particle();
      p.i = int(dims[0]);
      p.strand = int(dims[1]);
+     if (p.strand != cur_strand) {
+       println("strand " + str(p.strand) + " offset: " + str(i));
+       cur_strand = p.strand;
+       cur_offset = 0;
+       //p.offset = i;
+     }
+     p.offset = cur_offset;
+     cur_offset++;
      p.x = -dims[2]; //flipping the sign on this because the orientation of the original node list is likely inccorrect in X
      p.y = dims[3];
      p.z = dims[4];
@@ -195,12 +203,7 @@ void setup() {
   
   // set each strip to it's own color
   loadPixelColorByStrip();
-  
-  //cam = new PeasyCam(this,0,0,0, 10);
-  //cam = new PeasyCam(this, 0,0,0, 10);
-  //cam.setMinimumDistance(50);
-  //cam.setMaximumDistance(500);
-  //cam.setYawRotationMode();
+
 }
 
 
@@ -249,10 +252,10 @@ void draw() {
   
   delay(30); //some power supplies freak out if this is less than 30ms or so
   udp.send(packet_list.get(0), "10.4.2.11"); // 0-299
-  udp.send(packet_list.get(1), "10.4.2.10"); // 300-599
-  udp.send(packet_list.get(2), "10.4.2.13"); // 600-899
-  udp.send(packet_list.get(3), "10.4.2.14"); // 900-1199
-  udp.send(packet_list.get(4), "10.4.2.15"); // 1200-1500
+  udp.send(packet_list.get(1), "10.4.2.15"); // 300-599
+  udp.send(packet_list.get(2), "10.4.2.12"); // 600-899
+  udp.send(packet_list.get(3), "10.4.2.10"); // 900-1199
+  udp.send(packet_list.get(4), "10.4.2.14"); // 1200-1500
 }
 
 

@@ -29,10 +29,10 @@ CRGB *leds = (CRGB*)&incoming.leds;
 //byte mac[] = {  
 //  0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 byte mac[] = {  
-  0xDE, 0xAF, 0xB4, 0x4F, 0xE4, 0x10 };
+  0xDE, 0xAF, 0xB4, 0x4F, 0xE4, 0x16 };
 //IPAddress ip(192, 168, 1, 77);
 
-IPAddress ip(10,4,2,10);
+IPAddress ip(10,4,2,16);
 
 unsigned int localPort = 6038;      // local port to listen on
 
@@ -84,13 +84,13 @@ void loop() {
   if(packetSize)
   {
  
-Udp.read( (char*)&incoming, sizeof(incoming));
-//delay(1);
-//Serial.println("enetNeoPixel packet ");
-
-#ifdef HALF_DENSITY
-  //for (int i=0)
-#endif
+    Udp.read( (char*)&incoming, sizeof(incoming));
+    //delay(1);
+    //Serial.println("enetNeoPixel packet ");
+    
+    #ifdef HALF_DENSITY
+      //for (int i=0)
+    #endif
    
   }
  
