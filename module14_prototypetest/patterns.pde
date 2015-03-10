@@ -59,32 +59,92 @@ void radial3dspheres(ArrayList<Particle> particles, double speed){
          double y=pradial.y;
          double z=pradial.z;
          double[] ledxyz = new double[] {x,y,z};
-         double radialRatio=distanceBetweenPoints(ledxyz,centroid)/maxdistance;
+         double radialRatio=distanceBetweenPoints(ledxyz,centroid)/(maxdistance/2);
          double angle=angleFromOriginXY(centroid, ledxyz);
-         double pred = Math.sin(2.0*Math.PI*(radialRatio+(1-frame))) * 255;
-         double pblue = Math.sin(2.0*Math.PI*(radialRatio+(1-frame)*0.333333)) * 255;
-         double pgreen = Math.sin(2.0*Math.PI*(radialRatio+(1-frame)*0.666667)) * 255;
+         double pred = Math.sin(2.0*Math.PI*(radialRatio+(1-frame))) * 128 + 127;
+         double pblue = Math.sin(2.0*Math.PI*(radialRatio+(1-frame)*0.2))  * 128 + 127;
+         double pgreen = Math.sin(2.0*Math.PI*(radialRatio+(1-frame)*0.7))  * 128 + 127;
          pradial.r = (int)pred;
-         pradial.g = (int)pblue;
-         pradial.b = (int)pgreen;
+         pradial.g = (int)pgreen;
+         pradial.b = (int)pblue;
          particles.set(row,pradial);
   }
 }
+
+
+
+
+void radial3dspheres_reverse(ArrayList<Particle> particles, double speed){
+  frame=frame-speed %1.0;
+  double centroidx=minmaxxyz[0][0]+(minmaxxyz[0][1]-minmaxxyz[0][0])/2.0;
+  double centroidy=minmaxxyz[1][0]+(minmaxxyz[1][1]-minmaxxyz[1][0])/2.0;
+  double centroidz=minmaxxyz[2][0]+(minmaxxyz[2][1]-minmaxxyz[2][0])/2.0;
+  double[] centroid = new double[] {centroidx,centroidy,centroidz};  //DECLARE THIS GLOBALLY BRO (or just use the center node...)
+  double maxdistance=Math.sqrt(Math.pow((minmaxxyz[0][0]-minmaxxyz[0][1]),2)+Math.pow((minmaxxyz[1][0]-minmaxxyz[1][1]),2)+Math.pow((minmaxxyz[2][0]-minmaxxyz[2][1]),2))/2.0;
+  color[] ledcolors = new color[particles.size()];
+  for (int row = 0; row < particles.size(); row++) {
+         Particle pradial=particles.get(row);
+         double x=pradial.x;
+         double y=pradial.y;
+         double z=pradial.z;
+         double[] ledxyz = new double[] {x,y,z};
+         double radialRatio=distanceBetweenPoints(ledxyz,centroid)/(maxdistance/2);
+         double angle=angleFromOriginXY(centroid, ledxyz);
+         double pred = Math.sin(2.0*Math.PI*(radialRatio+(1-frame))) * 128 + 127;
+         double pblue = Math.sin(2.0*Math.PI*(radialRatio+(1-frame)*0.2))  * 128 + 127;
+         double pgreen = Math.sin(2.0*Math.PI*(radialRatio+(1-frame)*0.7))  * 128 + 127;
+         pradial.r = (int)pred;
+         pradial.g = (int)pgreen;
+         pradial.b = (int)pblue;
+         particles.set(row,pradial);
+  }
+}
+
+
+
+
+void radial3dspheres_blue(ArrayList<Particle> particles, double speed){
+  frame=frame+speed %1.0;
+  double centroidx=minmaxxyz[0][0]+(minmaxxyz[0][1]-minmaxxyz[0][0])/2.0;
+  double centroidy=minmaxxyz[1][0]+(minmaxxyz[1][1]-minmaxxyz[1][0])/2.0;
+  double centroidz=minmaxxyz[2][0]+(minmaxxyz[2][1]-minmaxxyz[2][0])/2.0;
+  double[] centroid = new double[] {centroidx,centroidy,centroidz};  //DECLARE THIS GLOBALLY BRO (or just use the center node...)
+  double maxdistance=Math.sqrt(Math.pow((minmaxxyz[0][0]-minmaxxyz[0][1]),2)+Math.pow((minmaxxyz[1][0]-minmaxxyz[1][1]),2)+Math.pow((minmaxxyz[2][0]-minmaxxyz[2][1]),2))/2.0;
+  color[] ledcolors = new color[particles.size()];
+  for (int row = 0; row < particles.size(); row++) {
+         Particle pradial=particles.get(row);
+         double x=pradial.x;
+         double y=pradial.y;
+         double z=pradial.z;
+         double[] ledxyz = new double[] {x,y,z};
+         double radialRatio=distanceBetweenPoints(ledxyz,centroid)/(maxdistance/2);
+         double angle=angleFromOriginXY(centroid, ledxyz);
+         double pred = 0;//Math.sin(2.0*Math.PI*(radialRatio+(1-frame))) * 128 + 127;
+         double pblue = Math.sin(2.0*Math.PI*(radialRatio+(1-frame)*0.2))  * 128 + 127;
+         double pgreen = 0;//Math.sin(2.0*Math.PI*(radialRatio+(1-frame)*0.7))  * 128 + 127;
+         pradial.r = (int)pred;
+         pradial.g = (int)pgreen;
+         pradial.b = (int)pblue;
+         particles.set(row,pradial);
+  }
+}
+
   
   
-void slideTheImage(ArrayList<Particle> particles){
+void slideTheImage(ArrayList<Particle> particles, int rate){
 
       theduplicat = new color[hite][widf];
       theduplicat=theimage; 
 
       for (int imgy = 0; imgy < hite; imgy++) {
-        theimage[imgy][widf-1]=theduplicat[imgy][0];
+        for (int inc = 1; inc < rate+1; inc++) {
+          theimage[imgy][widf-inc]=theduplicat[imgy][0];
+        }
       }
-        
   
-      for (int imgx = 0; imgx < widf-1; imgx++ ) {
+      for (int imgx = 0; imgx < widf-rate; imgx++ ) {
         for (int imgyy = 0; imgyy < hite; imgyy++) {
-          theimage[imgyy][imgx]=theduplicat[imgyy][imgx+1];
+          theimage[imgyy][imgx]=theduplicat[imgyy][imgx+rate];
         }
       }
       
@@ -111,7 +171,7 @@ static int[] scaleLocationInImageToLocationInModule(double[] imagedims, double[]
   
       double newx=(ledxy[0]-minmaxxyz[0][0])/(minmaxxyz[0][1]-minmaxxyz[0][0])*imagedims[0];
       double newy=(ledxy[1]-minmaxxyz[1][0])/(minmaxxyz[1][1]-minmaxxyz[1][0])*imagedims[1];
-      println(newx);
+      //println(newx);
       int newxint=(int)newx;
       int newyint=(int)newy;
       if (newxint>=imagedims[0]){

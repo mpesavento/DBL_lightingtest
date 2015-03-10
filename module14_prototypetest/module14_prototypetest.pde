@@ -26,7 +26,7 @@ ArrayList<Particle> particles;
 
 int NUM_CTRL = 5; //number of controllers we are using
 
-float master_gain = 0.25; //0.5;
+float master_gain = 0.45; //0.5;
 
 color white = color(255,255,0);
 
@@ -254,7 +254,9 @@ void setup() {
   // set each strip to its own color
   loadPixelColorByStrip();
   
-  initPatterns(particles, "TestColors2.jpg");
+  initPatterns(particles, "TestColors3.jpg");
+  //initPatterns(particles, "painting.png");
+  //initPatterns(particles, "TestColors2.jpg");
   //initPatterns(particles, "vertical.png");
 }
 
@@ -272,10 +274,18 @@ void draw() {
   
   
   //PATTERN: image cycling code: just uncomment this line
-  //slideTheImage(particles);
+  //slideTheImage(particles, 10);
 
   //PATTERN: Radial spheres: Uncomment this block
-  radial3dspheres(particles, 0.02);
+  radial3dspheres_reverse(particles, 0.004+Math.random()*0.004);
+
+  // neurons talking animation
+  think(particles);
+  
+  
+  //PATTERN: Radial spheres: Uncomment this block
+  //radial3dspheres_blue(particles, 0.01);
+
 
   //PATTERN: loop over hue values
   //loopHSV(particles);
