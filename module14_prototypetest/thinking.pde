@@ -55,7 +55,7 @@ void think(ArrayList<Particle> particles){
       pulsePos = end*1.0;
     }
 
-    println(str(direction));
+    //println(str(direction));
   }
 
   if(direction==1){

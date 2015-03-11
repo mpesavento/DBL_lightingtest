@@ -1,5 +1,4 @@
 import hypermedia.net.*;
-import peasy.*;
 import oscP5.*;
 import netP5.*;
 
@@ -40,6 +39,11 @@ int[] ctrl_color = {color(255,0,0),
 
 int TOTAL_NUMLED = 1483; //total number of LEDs on module
 int NUM_LED = 300; // max number of LEDs in each strand
+
+int PATTERN_INTERVAL = 60; // number of seconds to play pattern before switching to the next
+int NUM_PATTERN = 4; //number of patterns to iterate through
+int curpattern = 0;
+float lastTime; //holds last recorded tie for the pattern timer
 
 boolean MOUSE_ROTATE = boolean(1); // use the mouse to rotate the image, or not.
 
@@ -254,6 +258,8 @@ void setup() {
   // set each strip to its own color
   loadPixelColorByStrip();
   
+  lastTime = millis();
+  
   initPatterns(particles, "TestColors3.jpg");
   //initPatterns(particles, "painting.png");
   //initPatterns(particles, "TestColors2.jpg");
@@ -273,24 +279,36 @@ void draw() {
   point(0,0,0);
   
   
-  //PATTERN: image cycling code: just uncomment this line
-  //slideTheImage(particles, 10);
-
-  //PATTERN: Radial spheres: Uncomment this block
-  radial3dspheres_reverse(particles, 0.004+Math.random()*0.004);
-
-  // neurons talking animation
-  think(particles);
   
+  if ( millis()-lastTime > PATTERN_INTERVAL*1000) {
+    lastTime = millis();
+     curpattern = (curpattern+1) % NUM_PATTERN;
+     println("switching pattern to #" + str(curpattern));
+  }
   
-  //PATTERN: Radial spheres: Uncomment this block
-  //radial3dspheres_blue(particles, 0.01);
-
-
-  //PATTERN: loop over hue values
-  //loopHSV(particles);
-
-  
+  switch (curpattern) {
+    case 0:
+      //PATTERN: image cycling code: just uncomment this line
+      slideTheImage(particles, 10);
+      think(particles); // neurons talking animation
+      break;
+    case 1:
+      //PATTERN: Radial spheres: Uncomment this block
+      radial3dspheres_reverse(particles, 0.004+Math.random()*0.004);
+      think(particles); // neurons talking animation
+      break;
+    case 2:
+      //PATTERN: Radial spheres: Uncomment this block
+      radial3dspheres_blue(particles, 10);
+      think(particles); // neurons talking animation
+      break;
+    case 3:
+      //PATTERN: loop over hue values
+      loopHSV(particles);
+      break;
+  }
+     
+   
   
   updatePackets();
 
