@@ -1,9 +1,5 @@
 import hypermedia.net.*;
-import oscP5.*;
-import netP5.*;
 
-OscP5 oscP5;
-NetAddress remoteOSCLocation;
 
 
 UDP udp;
@@ -40,7 +36,7 @@ int[] ctrl_color = {color(255,0,0),
 int TOTAL_NUMLED = 1483; //total number of LEDs on module
 int NUM_LED = 300; // max number of LEDs in each strand
 
-int PATTERN_INTERVAL = 60; // number of seconds to play pattern before switching to the next
+int PATTERN_INTERVAL = 15; //60; // number of seconds to play pattern before switching to the next
 int NUM_PATTERN = 4; //number of patterns to iterate through
 int curpattern = 0;
 float lastTime; //holds last recorded tie for the pattern timer
@@ -134,25 +130,6 @@ void updatePackets() {
     
 }
 
-
-
-// placeholder, use this to access Muse variables specifically
-void oscEvent(OscMessage theOscMessage) 
-{  
-  // get the first value as an integer
-  int firstValue = theOscMessage.get(0).intValue();
- 
-  // get the second value as a float  
-  float secondValue = theOscMessage.get(1).floatValue();
- 
-  // get the third value as a string
-  String thirdValue = theOscMessage.get(2).stringValue();
- 
-  // print out the message
-  print("OSC Message Recieved: ");
-  print(theOscMessage.addrPattern() + " ");
-  println(firstValue + " " + secondValue + " " + thirdValue);
-}
 
 
 
@@ -286,6 +263,8 @@ void draw() {
      println("switching pattern to #" + str(curpattern));
   }
   
+  //loopHSV(particles);
+  
   switch (curpattern) {
     case 0:
       //PATTERN: image cycling code: just uncomment this line
@@ -307,14 +286,15 @@ void draw() {
       loopHSV(particles);
       break;
   }
+  
      
    
   
   updatePackets();
 
+  // draw pixels in sim
   for (int i =0 ; i<particles.size(); i++) {
     Particle p = particles.get(i);
-
     strokeWeight(3);
     stroke(color(p.r, p.g, p.b));
     point(p.x, p.y, p.z);
