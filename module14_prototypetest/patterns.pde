@@ -24,17 +24,18 @@ void loopHSV(ArrayList<Particle> particles) {
   int h = 0;
   for (int i=0; i<particles.size(); i++) {
     Particle p = particles.get(i);
+    colorMode(HSB, 360, 100, 100); //switch color mode to HSB, in degrees and percent
     //h = int(map(i, 0, particles.size(), 0, 360) + offset) % 360;
     h = (int(float(i) / float(particles.size()/5) * 360.0) + offset) % 360;
     color c = color(h, 100, 100);
     //color c = Color.HSBtoRGB(h,100,70);
-    
+    colorMode(RGB, 255);//switch back to RGB
     p.r = int(red(c));
     p.g = int(green(c));
     p.b = int(blue(c));
   }
 
-  colorMode(RGB, 255);//switch back to RGB
+  
 }
 
 static double distanceBetweenPoints(double[] point1, double[] point2){
